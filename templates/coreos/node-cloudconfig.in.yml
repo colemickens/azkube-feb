@@ -1,0 +1,111 @@
+#cloud-config
+
+write_files:
+- path: "/etc/kubernetes/azure-config.json"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {
+      "privateKeyPath": "/var/lib/waagent/{{AZ_SP_THUMBPRINT}}.prv",
+      "certificatePath": "/var/lib/waagent/{{AZ_SP_THUMBPRINT}}.crt",
+      "applicationId": "{{AZ_APP_URL}}",
+      "tenantId": "{{AZ_TENANT_ID}}",
+      "subscriptionId": "{{AZ_SUBSCRIPTION_ID}}",
+      "vaultName": "{{AZ_VAULT_NAME}}"
+    }
+
+- path: "/etc/kubernetes/manifests/minion-components.yaml"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": { "name": "k8s-master" },
+      "spec": {
+        "hostNetwork": true,
+        "containers": [
+          {
+            "name": "kube-proxy",
+            "image": "{{HYPERKUBE_CONTAINER}}",
+            "command": [
+              "/hyperkube",
+              "proxy",
+              "--kubeconfig=/etc/kubernetes/minion-proxy-kubeconfig",
+              "--proxy-mode=iptables",
+              "--v=2"
+            ],
+            "securityContext": {
+              "privileged": true
+            },
+            "volumeMounts": [ { "name": "etc-kubernetes", "mountPath": "/etc/kubernetes" } ]
+          }
+        ],
+        "volumes": [ { "name": "etc-kubernetes", "hostPath": { "path": "/etc/kubernetes" } } ]
+      }
+    }
+
+coreos:
+  flannel:
+    etcd_endpoints: "http://{{MASTER_PRIVATE_IP}}:2379"
+  units:
+    - name: "docker.service"
+      command: "start"
+    - name: flanneld.service
+      command: "start"
+    - name: "kubelet.service"
+      command: "start"
+      content: |
+        [Unit]
+        Description=Kubelet
+        Requires=docker.service
+        Requires=flanneld.service
+        Requires=ensure-secrets.service
+        After=docker.service
+        After=flanneld.service
+        After=ensure-secrets.service
+        
+        [Service]
+        Restart=always
+        ExecStart=/usr/bin/docker run \
+                    --net=host \
+                    --privileged \
+                    -v /sys:/sys:ro \
+                    -v /var/run:/var/run:rw \
+                    -v /:/rootfs:ro \
+                    -v /dev:/dev \
+                    -v /var/lib/docker/:/var/lib/docker:ro \
+                    -v /var/lib/kubelet/:/var/lib/kubelet:rw \
+                    -v /etc/kubernetes:/etc/kubernetes:rw \
+                    {{HYPERKUBE_CONTAINER}} \
+                      /hyperkube kubelet \
+                        --containerized \
+                        --api-servers=https://{{MASTER_FQDN}}:6443 \
+                        --kubeconfig=/etc/kubernetes/minion-kubelet-kubeconfig \
+                        --address=0.0.0.0 \
+                        --allow-privileged=true \
+                        --enable-server \
+                        --config=/etc/kubernetes/manifests \
+                        --cluster-dns={{DNS_SERVICE_IP}} \
+                        --cluster-domain=cluster.local \
+                        --v=2
+        ExecStop=/usr/bin/docker stop -t 2 kubelet
+    - name: "ensure-secrets.service"
+      command: "start"
+      content: |
+        [Unit]
+        Description=Load kubeconfig files for the kube components
+        Before=kubelet.service
+        Requires=flanneld.service
+        Requires=docker.service
+        After=flanneld.service
+        After=docker.service
+        
+        [Service]
+        Restart=on-failure
+        ExecStart=/usr/bin/docker run \
+          -v /etc/ssl:/etc/ssl \
+          -v /usr/share/ca-certificates:/usr/share/ca-certificates \
+          -v /etc/kubernetes:/etc/kubernetes \
+          -v /var/lib/waagent:/var/lib/waagent \
+          colemickens/azkvbs /azkvbs -machineType=minion

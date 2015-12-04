@@ -1,0 +1,41 @@
+{
+  "masterVmSize": {
+    "value": "{{MASTER_VM_SIZE}}"
+  },
+  "minionVmSize": {
+    "value": "{{MINION_VM_SIZE}}"
+  },
+  "nodeCount": {
+    "value": {{NODE_COUNT}}
+  },
+  "username": {
+    "value": "{{USERNAME}}"
+  },
+  "masterFqdn": {
+    "value": "{{MASTER_FQDN}}"
+  },
+  "sshPublicKeyData": {
+    "value": "{{SSH_PUBLIC_KEY_DATA}}"
+  },
+  "hyperkubeContainer": {
+    "value": "gcr.io/google_containers/hyperkube:v1.1.1"
+  },
+  "tenantId": {
+    "value": "{{TENANT_ID}}"
+  },
+  "appUrl":{
+    "value": "{{APP_URL}}"
+  },
+  "servicePrincipalObjectId": {
+    "value": "{{SERVICE_PRINCIPAL_OBJECT_ID}}"
+  },
+  "servicePrincipalFingerprint": {
+    "value": "{{SERVICE_PRINCIPAL_FINGERPRINT}}"
+  },
+  "vaultName": {
+    "value": "{{VAULT_NAME}}"
+  },
+  "servicePrincipalSecretUrl": {
+    "value": "{{SERVICE_PRINCIPAL_SECRET_URL}}"
+  }
+}

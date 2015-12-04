@@ -1,0 +1,13 @@
+package: azkube
+import:
+- package: github.com/Azure/azure-sdk-for-go
+  version: 84843207ea0c77c8c8aecbe2e16ac77caa8ce9cc
+  subpackages:
+  - /arm/resources
+- package: github.com/cloudflare/cfssl
+  version: 755f4128c7c69bad69117e44ffa028c1847a0608
+  subpackages:
+  - /initca
+  - /csr
+- package: github.com/spf13/cobra
+  version: 1c44ec8d3f1552cac48999f9306da23c4d8a288b
