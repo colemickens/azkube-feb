@@ -6,14 +6,33 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
+	"text/template"
 )
 
-var variableRegex regexp.Regexp
-var parameterRegex regexp.Regexp
+var (
+	masterCloudConfigTemplate *template.Template
+	nodeCloudConfigTemplate   *template.Template
+	vaultTemplate             *template.Template
+	myriadTemplate            *template.Template
+	scaleTemplate             *template.Template
+)
 
 func init() {
-	variableRegex = *regexp.MustCompile("")
-	parameterRegex = *regexp.MustCompile("")
+	x := func(w, y, z string) *template.Template {
+		bytes, err := ioutil.ReadFile(w)
+		if err != nil {
+			panic(err)
+		}
+		contents := string(bytes)
+
+		return t.Must(template.New(y).Parse(contents))
+	}
+
+	masterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate", masterCloudConfigContents)
+	nodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate", nodeCloudConfigContents)
+	vaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate", vaultTemplateContents)
+	myriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate", myriadTemplateContents)
+	scaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate", scaleContents)
 }
 
 func formatCloudConfig(filepath string) (string, error) {
@@ -24,72 +43,84 @@ func formatCloudConfig(filepath string) (string, error) {
 
 	cloudConfig := string(cloudConfigBytes)
 
-	if strings.ContainsAny(cloudConfig, "'") {
-		panic("can't have single quotes in the cloud config files")
-	}
-
 	data, err := json.Marshal(&cloudConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	parameterRegex.ReplaceAllString(cloudConfig, "', parameters('$1'), '")
-	variableRegex.ReplaceAllString(cloudConfig, "', variables('$1'), '")
-
-	result := "[concat('" + string(data) + "')]"
-
 	return result, nil
 }
 
-func InsertCloudConfig(c string) string {
-	masterCloudConfig, err := formatCloudConfig("templates/coreos/master-cloudconfig.in.yaml")
+func CreateMyriadTemplate(config DeploymentConfig) map[string]interface{} {
+	masterBuf := bytes.Buffer{}
+	nodeBuf := bytes.Buffer{}
+
+	err := masterCloudConfigTemplate.Execute(&masterBuf, config)
 	if err != nil {
 		panic(err)
 	}
-	nodeCloudConfig, err := formatCloudConfig("templates/coreos/node-cloudconfig.in.yaml")
+	err = minionCloudConfigTemplate.Execute(&nodeBuf, config)
 	if err != nil {
 		panic(err)
 	}
 
-	template := c
-	template = strings.Replace(template, "{{MASTER_CLOUDCONFIG}}", masterCloudConfig, -1)
-	template = strings.Replace(template, "{{NODE_CLOUDCONFIG}}", nodeCloudConfig, -1)
+	config.CloudConfig = &CloudConfigConfig{
+		Master: "", //base64 it
+		Node:   "", // base64 it
+	}
 
-	return template
+	err = json.Marshal(masterBuf.String(), &config.CloudConfig.Master)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Marshal(nodeBuf.String(), &config.CloudConfig.Node)
+	if err != nil {
+		panic(err)
+	}
+
+	err = myriadTemplate.Execute(&myriadBuf, config)
+	if err != nil {
+		panic(err)
+	}
+
+	var myriadTemplate map[string]interface{}
+	err = json.Unmarshal(myriadBuf, &myriadTemplate)
+	if err != nil {
+		panic(err)
+	}
+
+	return myriadTemplate
 }
 
-func LoadAndFormat(name string, config DeployConfigOut, preprocessor func(c string) string) (template, parameters map[string]interface{}, err error) {
-	myriadTemplateBytes, err := ioutil.ReadFile("templates/coreos/" + name + ".in.json")
+func CreateVaultTemplate(config DeploymentConfig) map[string]interface{} {
+	vaultBuf := bytes.Buffer{}
+	err := vaultTempalte.Execute(&vaultBuf, config)
 	if err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 
-	myriadTemplate := string(myriadTemplateBytes)
-	if preprocessor != nil {
-		myriadTemplate = preprocessor(myriadTemplate)
-	}
-
-	myriadParamtersBytes, err := ioutil.ReadFile("templates/coreos/" + name + "-paramters.in.json")
+	var vaultTemplate map[string]interface{}
+	err = json.Unmarshal(vaultBuf, &vaultTemplate)
 	if err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 
-	params := string(myriadParamtersBytes)
-	params = strings.Replace(params, "{{MASTER_VM_SIZE}}", config.MasterVmSize, -1)
-	params = strings.Replace(params, "{{NODE_VM_SIZE}}", config.NodeVmSize, -1)
-	params = strings.Replace(params, "{{NODE_COUNT}}", fmt.Sprintf("%d", config.NodeCount), -1)
-	params = strings.Replace(params, "{{USERNAME}}", config.Username, -1)
-	params = strings.Replace(params, "{{MASTER_FQDN}}", config.MasterFqdn, -1)
-	params = strings.Replace(params, "{{SSH_PUBLIC_KEY_DATA}}", config.SshPublicKeyData, -1)
-	params = strings.Replace(params, "{{TENANT_ID}}", config.TenantID, -1)
-	params = strings.Replace(params, "{{APP_URL}}", config.AppURL, -1)
-	params = strings.Replace(params, "{{DEPLOYER_OBJECT_ID}}", config.DeployerObjectID, -1)
-	params = strings.Replace(params, "{{SERVICE_PRINCIPAL_OBJECT_ID}}", config.ServicePrincipalObjectID, -1)
-	params = strings.Replace(params, "{{SERVICE_PRINCIPAL_SECRET_URL}}", config.ServicePrincipalSecretURL, -1)
-	params = strings.Replace(params, "{{VAULT_NAME}}", config.VaultName, -1)
+	return vaultTemplate
+}
 
-	err = json.Unmarshal([]byte(myriadTemplate), &template)
-	err = json.Unmarshal([]byte(params), &parameters)
+func CreateScaleTemplate(config DeploymentConfig) map[string]interface{} {
+	scaleBuf := bytes.Buffer{}
+	err := scaleTempalte.Execute(&scaleBuf, config)
+	if err != nil {
+		panic(err)
+	}
 
-	return template, parameters, nil
+	var scaleTemplate map[string]interface{}
+	err = json.Unmarshal(scaleBuf, &scaleTemplate)
+	if err != nil {
+		panic(err)
+	}
+
+	return scaleTemplate
 }

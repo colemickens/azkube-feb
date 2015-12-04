@@ -54,7 +54,6 @@ func parseRsaPrivateKey(path string) (*rsa.PrivateKey, error) {
 }
 
 func GetAuthorizerInAzure(config DeployConfigOut, scope string) (servicePrincipalToken *azure.ServicePrincipalToken, err error) {
-
 	certificateData, err := ioutil.ReadFile("/var/lib/waagent/" + config.ServicePrincipalFingerprint + ".crt")
 	if err != nil {
 		log.Fatalln("failed", err)

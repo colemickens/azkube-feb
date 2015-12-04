@@ -1,63 +1,43 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "vaultName": {
-      "type": "string",
-      "metadata": {
-        "description": "The name of the Azure KeyVault"
-      }
-    },
-    "tenantId": {
-      "type": "string",
-      "metadata": {
-        "description": "Tenant Id"
-      }
-    },
-    "deployerObjectId": {
-      "type": "string",
-      "metadata": {
-        "description": "Tenant Id"
-      }
-    },
-    "servicePrincipalObjectId": {
-      "type": "string",
-      "metadata": {
-        "description": "Tenant Id"
-      }
-    }
-  },
-  "resources": [
-    {
-      "apiVersion": "2015-06-01",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "enabledForDeployment": "true",
-        "enabledForDiskEncryption": "false",
-        "tenantId": "[parameters('tenantId')]",
-        "accessPolicies": [
-          {
-            "tenantId": "[parameters('tenantId')]",
-            "objectId": "[parameters('deployerObjectId')]",
-            "permissions": {
-              "keys": "all",
-              "secrets": "all"
-            }
-          },
-          {
-            "tenantId": "[parameters('tenantId')]",
-            "objectId": "[parameters('servicePrincipalObjectId')]",
-            "permissions": {
-              "keys": "all",
-              "secrets": "all"
-            }
-          }
-        ],
-        "sku": {
-          "name": "Standard",
-          "family": "A"
-        }
-      }
-    }
-  ]
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"variables": {
+		"vaultName": "{{.Vault.Name}}",
+		"tenantId": "{{.App.TenantId}}",
+		"deployerObjectId": "{{.App.DeployerObjectId}}",
+		"servicePrincipalObjectId": "{{.App.ServicePrincipalObjectId}}"
+	},
+	"resources": [
+		{
+			"apiVersion": "2015-06-01",
+			"location": "[resourceGroup().location]",
+			"properties": {
+				"enabledForDeployment": "true",
+				"enabledForDiskEncryption": "false",
+				"tenantId": "[variables('tenantId')]",
+				"accessPolicies": [
+					{
+						"tenantId": "[variables('tenantId')]",
+						"objectId": "[variables('deployerObjectId')]",
+						"permissions": {
+							"keys": "all",
+							"secrets": "all"
+						}
+					},
+					{
+						"tenantId": "[variables('tenantId')]",
+						"objectId": "[variables('servicePrincipalObjectId')]",
+						"permissions": {
+							"keys": "all",
+							"secrets": "all"
+						}
+					}
+				],
+				"sku": {
+					"name": "Standard",
+					"family": "A"
+				}
+			}
+		}
+	]
 }

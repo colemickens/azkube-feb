@@ -54,9 +54,9 @@ func RunCertInstallCmd(config util.DeployConfigOut, machineType, destination str
 			"master-scheduler-kubeconfig":          "master-scheduler-kubeconfig",
 			"master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
 		},
-		"minion": {
-			"minion-proxy-kubeconfig":   "minion-proxy-kubeconfig",
-			"minion-kubelet-kubeconfig": "minion-kubelet-kubeconfig",
+		"node": {
+			"node-proxy-kubeconfig":   "node-proxy-kubeconfig",
+			"node-kubelet-kubeconfig": "node-kubelet-kubeconfig",
 		},
 		"etcd": {},
 	}

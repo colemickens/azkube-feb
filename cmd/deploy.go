@@ -77,10 +77,8 @@ func RunDeployCmd(config util.DeployConfigOut) {
 		panic(err)
 	}
 
-	vaultTemplate, vaultParams, err := util.LoadAndFormat("vault", config, nil)
-	if err != nil {
-		panic(err)
-	}
+	vaultTemplate := util.CreateVaultTemplate(config)
+	vaultParams := make(map[string]interface{})
 
 	deployClient := resources.NewDeploymentsClient(config.SubscriptionID)
 	deployClient.Authorizer, err = util.GetAuthorizer(config, azure.AzureResourceManagerScope)
@@ -104,10 +102,8 @@ func RunDeployCmd(config util.DeployConfigOut) {
 		panic(err)
 	}
 
-	myriadTemplate, myriadParams, err := util.LoadAndFormat("myriad", config, util.InsertCloudConfig)
-	if err != nil {
-		panic(err)
-	}
+	myriadTemplate := util.CreateMyriadTemplate(config)
+	myriadParams := make(map[string]interface{})
 
 	_, err = util.DoDeployment(config, "myriad", myriadTemplate, myriadParams, true)
 	if err != nil {
@@ -119,5 +115,6 @@ func RunDeployCmd(config util.DeployConfigOut) {
 
 func getMasterFQDN(config util.DeployConfigOut) string {
 	// TODO: this should be overrideable
+	// TODO: or add SAN support
 	return config.ResourceGroup + "-master." + config.Location + ".cloudapp.azure.com"
 }

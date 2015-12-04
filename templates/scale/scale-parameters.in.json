@@ -1,8 +1,0 @@
-{
-  "vmScaleSetName": { 
-    "value": "kube-minion-scaleset"
-  },
-  "nodeCount": {
-    "value": {{NODE_COUNT}}
-  }
-}
