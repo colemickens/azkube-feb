@@ -8,25 +8,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-var cachedDeploymentsClient *resources.DeploymentsClient = nil
-
-func getDeploymentsClient(config DeployConfigOut) (client *resources.DeploymentsClient, err error) {
-	if cachedDeploymentsClient != nil {
-		return cachedDeploymentsClient, nil
-	}
-
+func DoDeployment(config DeploymentProperties, name string, template, params map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
 	dpc := resources.NewDeploymentsClient(config.SubscriptionID)
 	dpc.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
-	cachedDeploymentsClient = &dpc
-	return cachedDeploymentsClient, nil
-}
-
-func DoDeployment(config DeployConfigOut, name string, template, params map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
-	dpc, err := getDeploymentsClient(config)
 	if err != nil {
 		panic(err)
 	}
@@ -56,10 +40,13 @@ func DoDeployment(config DeployConfigOut, name string, template, params map[stri
 	return &deploymentResponse, err
 }
 
-func WaitDeployment(config DeployConfigOut, deploymentName string) (*resources.DeploymentExtended, error) {
-	dpc, err := getDeploymentsClient(config)
+func WaitDeployment(config DeploymentProperties, deploymentName string) (*resources.DeploymentExtended, error) {
+	var err error
+
+	dpc := resources.NewDeploymentsClient(config.SubscriptionID)
+	dpc.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	var response resources.DeploymentExtended

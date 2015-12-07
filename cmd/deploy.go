@@ -37,7 +37,7 @@ func NewDeployCmd() *cobra.Command {
 				log.Fatalln(err)
 			}
 
-			var config util.DeployConfigOut
+			var config util.DeploymentConfig
 			config.DeployConfigIn = configIn
 			config.AppName = config.ResourceGroup + "-app"
 			config.AppURL = "http://" + config.AppName + "/"

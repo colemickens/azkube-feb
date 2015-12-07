@@ -11,12 +11,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
 )
 
-func GetAuthorizer(config DeployConfigOut, scope string) (servicePrincipalToken *azure.ServicePrincipalToken, err error) {
+func GetAuthorizer(config DeploymentProperties, scope string) (servicePrincipalToken *azure.ServicePrincipalToken, err error) {
 	spt, err := azure.NewServicePrincipalToken(
-		config.ClientID,
+		config.DeployerClientID,
 		config.TenantID,
 		scope,
-		config.ClientSecret,
+		config.DeployerClientSecret,
 	)
 	if err != nil {
 		return nil, err
@@ -53,8 +53,8 @@ func parseRsaPrivateKey(path string) (*rsa.PrivateKey, error) {
 	return nil, fmt.Errorf("Failed to parse private key as Pkcs#1 or Pkcs#8. (%s). (%s).", errPkcs1, errPkcs8)
 }
 
-func GetAuthorizerInAzure(config DeployConfigOut, scope string) (servicePrincipalToken *azure.ServicePrincipalToken, err error) {
-	certificateData, err := ioutil.ReadFile("/var/lib/waagent/" + config.ServicePrincipalFingerprint + ".crt")
+func GetAuthorizerInAzure(deployment DeploymentProperties, scope string) (servicePrincipalToken *azure.ServicePrincipalToken, err error) {
+	certificateData, err := ioutil.ReadFile("/var/lib/waagent/" + deployment.App.ServicePrincipalFingerprint + ".crt")
 	if err != nil {
 		log.Fatalln("failed", err)
 	}
@@ -69,16 +69,16 @@ func GetAuthorizerInAzure(config DeployConfigOut, scope string) (servicePrincipa
 		panic(err)
 	}
 
-	privateKey, err := parseRsaPrivateKey("/var/lib/waagent/" + config.ServicePrincipalFingerprint + ".key")
+	privateKey, err := parseRsaPrivateKey("/var/lib/waagent/" + deployment.App.ServicePrincipalFingerprint + ".key")
 	if err != nil {
 		panic(err)
 	}
 
 	spt, err := azure.NewServicePrincipalTokenFromCertificate(
-		config.AppURL,
+		deployment.App.AppURL,
 		certificate,
 		privateKey,
-		config.TenantID,
+		deployment.TenantID,
 		AzureVaultScope)
 	return spt, err
 }

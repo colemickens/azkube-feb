@@ -1,11 +1,9 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"regexp"
-	"strings"
 	"text/template"
 )
 
@@ -18,21 +16,21 @@ var (
 )
 
 func init() {
-	x := func(w, y, z string) *template.Template {
-		bytes, err := ioutil.ReadFile(w)
+	x := func(y, z string) *template.Template {
+		bytes, err := ioutil.ReadFile(y)
 		if err != nil {
 			panic(err)
 		}
 		contents := string(bytes)
 
-		return t.Must(template.New(y).Parse(contents))
+		return template.Must(template.New(z).Parse(contents))
 	}
 
-	masterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate", masterCloudConfigContents)
-	nodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate", nodeCloudConfigContents)
-	vaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate", vaultTemplateContents)
-	myriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate", myriadTemplateContents)
-	scaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate", scaleContents)
+	masterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate")
+	nodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate")
+	vaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate")
+	myriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate")
+	scaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate")
 }
 
 func formatCloudConfig(filepath string) (string, error) {
@@ -48,10 +46,10 @@ func formatCloudConfig(filepath string) (string, error) {
 		panic(err)
 	}
 
-	return result, nil
+	return string(data), nil
 }
 
-func CreateMyriadTemplate(config DeploymentConfig) map[string]interface{} {
+func CreateMyriadTemplate(config DeploymentProperties) map[string]interface{} {
 	masterBuf := bytes.Buffer{}
 	nodeBuf := bytes.Buffer{}
 
@@ -59,12 +57,12 @@ func CreateMyriadTemplate(config DeploymentConfig) map[string]interface{} {
 	if err != nil {
 		panic(err)
 	}
-	err = minionCloudConfigTemplate.Execute(&nodeBuf, config)
+	err = nodeCloudConfigTemplate.Execute(&nodeBuf, config)
 	if err != nil {
 		panic(err)
 	}
 
-	config.CloudConfig = &CloudConfigConfig{
+	config.CloudConfig = CloudConfigConfig{
 		Master: "", //base64 it
 		Node:   "", // base64 it
 	}

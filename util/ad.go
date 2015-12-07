@@ -2,7 +2,7 @@ package util
 
 import ()
 
-func CreateApp(config DeployConfigOut) (servicePricipalObjectID string, err error) {
+func CreateApp(config DeploymentConfig) (servicePricipalObjectID string, err error) {
 	// ad app create
 
 	// ad sp create

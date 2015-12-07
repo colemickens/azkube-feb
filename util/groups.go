@@ -10,7 +10,7 @@ import (
 
 var cachedGroupsClient *resources.GroupsClient = nil
 
-func getGroupsClient(config DeployConfigOut) (groupsClient *resources.GroupsClient, err error) {
+func getGroupsClient(config DeploymentProperties) (groupsClient *resources.GroupsClient, err error) {
 	if cachedGroupsClient != nil {
 		return cachedGroupsClient, nil
 	}
@@ -25,7 +25,7 @@ func getGroupsClient(config DeployConfigOut) (groupsClient *resources.GroupsClie
 	return cachedGroupsClient, nil
 }
 
-func EnsureResourceGroup(config DeployConfigOut, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
+func EnsureResourceGroup(config DeploymentProperties, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
 	groupsClient, err := getGroupsClient(config)
 
 	if err != nil {
@@ -48,7 +48,7 @@ func EnsureResourceGroup(config DeployConfigOut, waitDeployment bool) (resourceG
 	return &response, nil
 }
 
-func WaitResourceGroup(config DeployConfigOut) (resourceGroup *resources.ResourceGroup, err error) {
+func WaitResourceGroup(config DeploymentProperties) (resourceGroup *resources.ResourceGroup, err error) {
 	groupsClient, err := getGroupsClient(config)
 	if err != nil {
 		return nil, err
