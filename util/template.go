@@ -50,56 +50,56 @@ func formatCloudConfig(filepath string) (string, error) {
 }
 
 func CreateMyriadTemplate(config DeploymentProperties) map[string]interface{} {
-	masterBuf := bytes.Buffer{}
-	nodeBuf := bytes.Buffer{}
-
-	err := masterCloudConfigTemplate.Execute(&masterBuf, config)
-	if err != nil {
-		panic(err)
-	}
-	err = nodeCloudConfigTemplate.Execute(&nodeBuf, config)
-	if err != nil {
-		panic(err)
-	}
-
 	config.CloudConfig = CloudConfigConfig{
 		Master: "", //base64 it
 		Node:   "", // base64 it
 	}
 
-	err = json.Marshal(masterBuf.String(), &config.CloudConfig.Master)
+	var masterBuf bytes.Buffer
+	err := masterCloudConfigTemplate.Execute(&masterBuf, config)
 	if err != nil {
 		panic(err)
 	}
-
-	err = json.Marshal(nodeBuf.String(), &config.CloudConfig.Node)
+	master, err := json.Marshal(masterBuf.String())
 	if err != nil {
 		panic(err)
 	}
+	config.CloudConfig.Master = string(master)
 
+	var nodeBuf bytes.Buffer
+	err = nodeCloudConfigTemplate.Execute(&nodeBuf, config)
+	if err != nil {
+		panic(err)
+	}
+	node, err := json.Marshal(nodeBuf.String())
+	if err != nil {
+		panic(err)
+	}
+	config.CloudConfig.Node = string(node)
+
+	var myriadBuf bytes.Buffer
+	var myriadMap map[string]interface{}
 	err = myriadTemplate.Execute(&myriadBuf, config)
 	if err != nil {
 		panic(err)
 	}
-
-	var myriadTemplate map[string]interface{}
-	err = json.Unmarshal(myriadBuf, &myriadTemplate)
+	err = json.Unmarshal(myriadBuf.Bytes(), &myriadMap)
 	if err != nil {
 		panic(err)
 	}
 
-	return myriadTemplate
+	return myriadMap
 }
 
-func CreateVaultTemplate(config DeploymentConfig) map[string]interface{} {
+func CreateVaultTemplate(config DeploymentProperties) map[string]interface{} {
 	vaultBuf := bytes.Buffer{}
-	err := vaultTempalte.Execute(&vaultBuf, config)
+	err := vaultTemplate.Execute(&vaultBuf, config)
 	if err != nil {
 		panic(err)
 	}
 
 	var vaultTemplate map[string]interface{}
-	err = json.Unmarshal(vaultBuf, &vaultTemplate)
+	err = json.Unmarshal(vaultBuf.Bytes(), &vaultTemplate)
 	if err != nil {
 		panic(err)
 	}
@@ -109,13 +109,13 @@ func CreateVaultTemplate(config DeploymentConfig) map[string]interface{} {
 
 func CreateScaleTemplate(config DeploymentConfig) map[string]interface{} {
 	scaleBuf := bytes.Buffer{}
-	err := scaleTempalte.Execute(&scaleBuf, config)
+	err := scaleTemplate.Execute(&scaleBuf, config)
 	if err != nil {
 		panic(err)
 	}
 
 	var scaleTemplate map[string]interface{}
-	err = json.Unmarshal(scaleBuf, &scaleTemplate)
+	err = json.Unmarshal(scaleBuf.Bytes(), &scaleTemplate)
 	if err != nil {
 		panic(err)
 	}

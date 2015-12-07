@@ -27,7 +27,7 @@ func NewCertInstallCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting certinstall command")
 
-			var config util.DeployConfigOut
+			var config util.DeploymentProperties
 			RunCertInstallCmd(config, machineType, destination)
 
 			log.Println("finished certinstall command")
@@ -41,7 +41,7 @@ func NewCertInstallCmd() *cobra.Command {
 	return certInstallCmd
 }
 
-func RunCertInstallCmd(config util.DeployConfigOut, machineType, destination string) {
+func RunCertInstallCmd(config util.DeploymentProperties, machineType, destination string) {
 	var err error
 
 	secretMap := map[string]map[string]string{

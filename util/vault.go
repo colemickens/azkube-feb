@@ -22,7 +22,7 @@ type Secret struct {
 
 var cachedVaultClient *autorest.Client = nil
 
-func putSecret(config DeployConfigOut, client *autorest.Client, secretPath, secretName string) (secretURL string, err error) {
+func putSecret(config DeploymentProperties, client *autorest.Client, secretPath, secretName string) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
 	pathParams := map[string]interface{}{
@@ -33,7 +33,7 @@ func putSecret(config DeployConfigOut, client *autorest.Client, secretPath, secr
 		Id string `json:"id"`
 	}
 
-	baseURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.VaultName, 1)
+	baseURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.Vault.Name, 1)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
@@ -67,7 +67,7 @@ func putSecret(config DeployConfigOut, client *autorest.Client, secretPath, secr
 	return "", nil
 }
 
-func UploadSecrets(config DeployConfigOut, client *autorest.Client) (ServicePrincipalSecretURL string, err error) {
+func UploadSecrets(config DeploymentProperties, client *autorest.Client) (ServicePrincipalSecretURL string, err error) {
 	secrets := map[string]string{
 		"pki/ca.crt":                               "ca-crt",
 		"pki/apiserver.crt":                        "apiserver-crt",
@@ -99,7 +99,7 @@ func UploadSecrets(config DeployConfigOut, client *autorest.Client) (ServicePrin
 	return servicePrincipalSecretURL, nil
 }
 
-func GetSecret(config DeployConfigOut, client *autorest.Client, secretName string) (*string, error) {
+func GetSecret(config DeploymentProperties, client *autorest.Client, secretName string) (*string, error) {
 	p := map[string]interface{}{
 		"secret-name":    secretName,
 		"secret-version": "",
@@ -108,7 +108,7 @@ func GetSecret(config DeployConfigOut, client *autorest.Client, secretName strin
 		"api-version": AzureVaultApiVersion,
 	}
 
-	secretURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.VaultName, -1)
+	secretURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.Vault.Name, -1)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsGet(),

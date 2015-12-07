@@ -19,6 +19,7 @@ const (
 
 func NewDeployCmd() *cobra.Command {
 	var configPath string
+	var outputPath string
 
 	var deployCmd = &cobra.Command{
 		Use:   "deploy",
@@ -27,7 +28,7 @@ func NewDeployCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting deploy command")
 
-			var configIn util.DeployConfigIn
+			var configIn util.DeploymentConfig
 			configContents, err := ioutil.ReadFile(configPath)
 			if err != nil {
 				log.Fatalln(err)
@@ -37,42 +38,42 @@ func NewDeployCmd() *cobra.Command {
 				log.Fatalln(err)
 			}
 
-			var config util.DeploymentConfig
-			config.DeployConfigIn = configIn
-			config.AppName = config.ResourceGroup + "-app"
-			config.AppURL = "http://" + config.AppName + "/"
-			config.VaultName = config.ResourceGroup + "-vault"
+			var config util.DeploymentProperties
+			config.DeploymentConfig = configIn
+			config.App.AppName = config.ResourceGroup + "-app"
+			config.App.AppURL = "http://" + config.App.AppName + "/"
+			config.Vault.Name = config.ResourceGroup + "-vault"
 			config.ClientNames = []string{"default"}
 			config.MasterFqdn = getMasterFQDN(config)
 
-			RunDeployCmd(config)
+			RunDeployCmd(config, outputPath)
 			log.Println("finished deploy command")
 		},
 	}
 
-	deployCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config")
+	deployCmd.Flags().StringVarP(&configPath, "config", "c", "/etc/kubernetes/azure.json", "path to config")
+	deployCmd.Flags().StringVarP(&outputPath, "output", "o", "./", "where to place output")
 
 	return deployCmd
 }
 
-func RunDeployCmd(config util.DeployConfigOut) {
-	// TODO: load DeployerObjectId somehow??
-
+func RunDeployCmd(config util.DeploymentProperties, outputPath string) {
 	util.EnsureResourceGroup(config, true)
 
-	err := util.GeneratePki(path.Join(config.OutputDirectory, "pki"))
+	err := util.GeneratePki(path.Join(outputPath, "pki"))
+
 	if err != nil {
 		panic(err)
 	}
 
 	// TODO: create active directory app
-	config.ServicePrincipalObjectID,
+	config.App.ServicePrincipalObjectID,
 		err = util.CreateApp(config)
 	if err != nil {
 		panic(err)
 	}
 
-	err = util.GenerateSsh(path.Join(config.OutputDirectory, "ssh"))
+	err = util.GenerateSsh(path.Join(outputPath, "ssh"))
 	if err != nil {
 		panic(err)
 	}
@@ -97,7 +98,7 @@ func RunDeployCmd(config util.DeployConfigOut) {
 		panic(err)
 	}
 
-	config.ServicePrincipalSecretURL, err = util.UploadSecrets(config, vaultClient)
+	config.Vault.ServicePrincipalSecretURL, err = util.UploadSecrets(config, vaultClient)
 	if err != nil {
 		panic(err)
 	}
@@ -113,7 +114,7 @@ func RunDeployCmd(config util.DeployConfigOut) {
 	log.Println("done")
 }
 
-func getMasterFQDN(config util.DeployConfigOut) string {
+func getMasterFQDN(config util.DeploymentProperties) string {
 	// TODO: this should be overrideable
 	// TODO: or add SAN support
 	return config.ResourceGroup + "-master." + config.Location + ".cloudapp.azure.com"

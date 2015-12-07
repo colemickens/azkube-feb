@@ -5,6 +5,7 @@ type DeploymentConfig struct {
 	MasterVmSize         string
 	NodeVmSize           string
 	InitialNodeCount     int
+	MasterFqdn           string
 	Username             string
 	TenantID             string
 	SubscriptionID       string
@@ -67,6 +68,8 @@ type CloudConfigConfig struct {
 // appears in same order as in myriad variables
 type DeploymentProperties struct {
 	DeploymentConfig
+
+	outputDirectory string
 
 	App         AppProperties
 	Vault       VaultProperties
