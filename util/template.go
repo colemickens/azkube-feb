@@ -50,32 +50,27 @@ func formatCloudConfig(filepath string) (string, error) {
 }
 
 func CreateMyriadTemplate(config DeploymentProperties) map[string]interface{} {
-	config.CloudConfig = CloudConfigConfig{
-		Master: "", //base64 it
-		Node:   "", // base64 it
-	}
-
 	var masterBuf bytes.Buffer
 	err := masterCloudConfigTemplate.Execute(&masterBuf, config)
 	if err != nil {
 		panic(err)
 	}
-	master, err := json.Marshal(masterBuf.String())
+	masterBytes, err := json.Marshal(masterBuf.String())
 	if err != nil {
 		panic(err)
 	}
-	config.CloudConfig.Master = string(master)
+	config.CloudConfig.Master = string(masterBytes)
 
 	var nodeBuf bytes.Buffer
 	err = nodeCloudConfigTemplate.Execute(&nodeBuf, config)
 	if err != nil {
 		panic(err)
 	}
-	node, err := json.Marshal(nodeBuf.String())
+	nodeBytes, err := json.Marshal(nodeBuf.String())
 	if err != nil {
 		panic(err)
 	}
-	config.CloudConfig.Node = string(node)
+	config.CloudConfig.Node = string(nodeBytes)
 
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}

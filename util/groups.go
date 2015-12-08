@@ -8,31 +8,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-var cachedGroupsClient *resources.GroupsClient = nil
-
-func getGroupsClient(config DeploymentProperties) (groupsClient *resources.GroupsClient, err error) {
-	if cachedGroupsClient != nil {
-		return cachedGroupsClient, nil
-	}
-
-	client := resources.NewGroupsClient(config.SubscriptionID)
-	client.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
-	cachedGroupsClient = &client
-	return cachedGroupsClient, nil
-}
-
 func EnsureResourceGroup(config DeploymentProperties, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
-	groupsClient, err := getGroupsClient(config)
-
+	groupsClient := resources.NewGroupsClient(config.SubscriptionID)
+	groupsClient.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
 
-	_ = groupsClient
 	response, err := groupsClient.CreateOrUpdate(config.ResourceGroup, resources.ResourceGroup{
 		Name:     &config.ResourceGroup,
 		Location: &config.Location,
@@ -49,7 +31,8 @@ func EnsureResourceGroup(config DeploymentProperties, waitDeployment bool) (reso
 }
 
 func WaitResourceGroup(config DeploymentProperties) (resourceGroup *resources.ResourceGroup, err error) {
-	groupsClient, err := getGroupsClient(config)
+	groupsClient := resources.NewGroupsClient(config.SubscriptionID)
+	groupsClient.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}

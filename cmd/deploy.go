@@ -60,15 +60,13 @@ func NewDeployCmd() *cobra.Command {
 func RunDeployCmd(config util.DeploymentProperties, outputPath string) {
 	util.EnsureResourceGroup(config, true)
 
-	err := util.GeneratePki(path.Join(outputPath, "pki"))
-
+	config.Pki, err := util.GeneratePki(path.Join(outputPath, "pki"))
 	if err != nil {
 		panic(err)
 	}
 
 	// TODO: create active directory app
-	config.App.ServicePrincipalObjectID,
-		err = util.CreateApp(config)
+	config.App, err = util.CreateApp(config, configIn.AppName, configIn.AppURL)
 	if err != nil {
 		panic(err)
 	}
@@ -98,7 +96,7 @@ func RunDeployCmd(config util.DeploymentProperties, outputPath string) {
 		panic(err)
 	}
 
-	config.Vault.ServicePrincipalSecretURL, err = util.UploadSecrets(config, vaultClient)
+	config.Secrets.ServicePrincipalSecretURL, err = util.UploadSecrets(config, vaultClient)
 	if err != nil {
 		panic(err)
 	}
