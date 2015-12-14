@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	masterCloudConfigTemplate *template.Template
-	nodeCloudConfigTemplate   *template.Template
-	vaultTemplate             *template.Template
-	myriadTemplate            *template.Template
-	scaleTemplate             *template.Template
+	MasterCloudConfigTemplate *template.Template
+	NodeCloudConfigTemplate   *template.Template
+	VaultTemplate             *template.Template
+	MyriadTemplate            *template.Template
+	ScaleTemplate             *template.Template
 )
 
 func init() {
@@ -26,11 +26,11 @@ func init() {
 		return template.Must(template.New(z).Parse(contents))
 	}
 
-	masterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate")
-	nodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate")
-	vaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate")
-	myriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate")
-	scaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate")
+	MasterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate")
+	NodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate")
+	VaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate")
+	MyriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate")
+	ScaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate")
 }
 
 func formatCloudConfig(filepath string) (string, error) {
@@ -49,20 +49,20 @@ func formatCloudConfig(filepath string) (string, error) {
 	return string(data), nil
 }
 
-func CreateMyriadTemplate(config DeploymentProperties) map[string]interface{} {
+func (d *Deployer) LoadMyriadCloudConfigs() (myriadConfig *MyriadConfig, err error) {
 	var masterBuf bytes.Buffer
-	err := masterCloudConfigTemplate.Execute(&masterBuf, config)
+	err = MasterCloudConfigTemplate.Execute(&masterBuf, d.State)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	masterBytes, err := json.Marshal(masterBuf.String())
 	if err != nil {
 		panic(err)
 	}
-	config.CloudConfig.Master = string(masterBytes)
+	myriadConfig.MasterCloudConfig = string(masterBytes)
 
 	var nodeBuf bytes.Buffer
-	err = nodeCloudConfigTemplate.Execute(&nodeBuf, config)
+	err = NodeCloudConfigTemplate.Execute(&nodeBuf, d.State)
 	if err != nil {
 		panic(err)
 	}
@@ -70,50 +70,23 @@ func CreateMyriadTemplate(config DeploymentProperties) map[string]interface{} {
 	if err != nil {
 		panic(err)
 	}
-	config.CloudConfig.Node = string(nodeBytes)
+	myriadConfig.NodeCloudConfig = string(nodeBytes)
 
+	return myriadConfig, nil
+}
+
+func (d *Deployer) PopulateTemplate(t *template.Template) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}
-	err = myriadTemplate.Execute(&myriadBuf, config)
+
+	err = t.Execute(&myriadBuf, d.State)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	err = json.Unmarshal(myriadBuf.Bytes(), &myriadMap)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return myriadMap
-}
-
-func CreateVaultTemplate(config DeploymentProperties) map[string]interface{} {
-	vaultBuf := bytes.Buffer{}
-	err := vaultTemplate.Execute(&vaultBuf, config)
-	if err != nil {
-		panic(err)
-	}
-
-	var vaultTemplate map[string]interface{}
-	err = json.Unmarshal(vaultBuf.Bytes(), &vaultTemplate)
-	if err != nil {
-		panic(err)
-	}
-
-	return vaultTemplate
-}
-
-func CreateScaleTemplate(config DeploymentConfig) map[string]interface{} {
-	scaleBuf := bytes.Buffer{}
-	err := scaleTemplate.Execute(&scaleBuf, config)
-	if err != nil {
-		panic(err)
-	}
-
-	var scaleTemplate map[string]interface{}
-	err = json.Unmarshal(scaleBuf.Bytes(), &scaleTemplate)
-	if err != nil {
-		panic(err)
-	}
-
-	return scaleTemplate
+	return myriadMap, nil
 }

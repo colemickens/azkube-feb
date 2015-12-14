@@ -4,42 +4,30 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
+	//"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-func EnsureResourceGroup(config DeploymentProperties, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
-	groupsClient := resources.NewGroupsClient(config.SubscriptionID)
-	groupsClient.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := groupsClient.CreateOrUpdate(config.ResourceGroup, resources.ResourceGroup{
-		Name:     &config.ResourceGroup,
-		Location: &config.Location,
+func (d *Deployer) EnsureResourceGroup(name, location string, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
+	response, err := d.GroupsClient.CreateOrUpdate(name, resources.ResourceGroup{
+		Name:     &name,
+		Location: &location,
 	})
 	if err != nil {
 		return &response, err
 	}
 
 	if waitDeployment {
-		return WaitResourceGroup(config)
+		return d.WaitResourceGroup(name)
 	}
 
 	return &response, nil
 }
 
-func WaitResourceGroup(config DeploymentProperties) (resourceGroup *resources.ResourceGroup, err error) {
-	groupsClient := resources.NewGroupsClient(config.SubscriptionID)
-	groupsClient.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
+func (d *Deployer) WaitResourceGroup(groupName string) (resourceGroup *resources.ResourceGroup, err error) {
 	var response resources.ResourceGroup
 	for {
-		response, err = groupsClient.Get(config.ResourceGroup)
+		response, err = d.GroupsClient.Get(groupName)
 		if err != nil {
 			return &response, err
 		}

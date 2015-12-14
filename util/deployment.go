@@ -4,54 +4,42 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
+	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-func DoDeployment(config DeploymentProperties, name string, template, params map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
-	dpc := resources.NewDeploymentsClient(config.SubscriptionID)
-	dpc.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		panic(err)
-	}
-
+func (d *Deployer) DoDeployment(name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
 	deployment := resources.Deployment{
 		Properties: &resources.DeploymentProperties{
-			Template:   &template,
-			Parameters: &params,
-			Mode:       resources.Incremental,
+			Template: &template,
+			Mode:     resources.Incremental,
 		},
 	}
 
-	deploymentResponse, err := dpc.CreateOrUpdate(
-		config.ResourceGroup,
-		config.ResourceGroup+"-"+name+"-deploy",
+	deploymentResponse, err := d.DeploymentsClient.CreateOrUpdate(
+		d.Config.ResourceGroup,
+		d.Config.ResourceGroup+"-"+name+"-deploy",
 		deployment)
 	if err != nil {
 		panic(err)
 	}
 
 	if waitDeployment {
+		// TODO(colemickens): assert this name is the same?
+		// here we use the returned deploymentName but in groups we use original resGroup name?
 		deploymentName := *deploymentResponse.Name
-		response, err = WaitDeployment(config, deploymentName)
+		response, err = d.WaitDeployment(deploymentName)
 		return response, err
 	}
 
 	return &deploymentResponse, err
 }
 
-func WaitDeployment(config DeploymentProperties, deploymentName string) (*resources.DeploymentExtended, error) {
+func (d *Deployer) WaitDeployment(deploymentName string) (*resources.DeploymentExtended, error) {
 	var err error
-
-	dpc := resources.NewDeploymentsClient(config.SubscriptionID)
-	dpc.Authorizer, err = GetAuthorizer(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		panic(err)
-	}
-
 	var response resources.DeploymentExtended
 	for {
-		response, err = dpc.Get(config.ResourceGroup, deploymentName)
+		response, err = d.DeploymentsClient.Get(deploymentName, deploymentName)
 		if err != nil {
 			return &response, err
 		}

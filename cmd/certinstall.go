@@ -5,8 +5,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
+	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
 )
@@ -27,8 +27,8 @@ func NewCertInstallCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting certinstall command")
 
-			var config util.DeploymentProperties
-			RunCertInstallCmd(config, machineType, destination)
+			var deployProperties util.DeploymentProperties
+			RunCertInstallCmd(deployProperties, machineType, destination)
 
 			log.Println("finished certinstall command")
 		},
@@ -41,8 +41,13 @@ func NewCertInstallCmd() *cobra.Command {
 	return certInstallCmd
 }
 
-func RunCertInstallCmd(config util.DeploymentProperties, machineType, destination string) {
+func RunCertInstallCmd(deployProperties util.DeploymentProperties, machineType, destination string) {
 	var err error
+
+	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e")
+	if err != nil {
+		panic(err)
+	}
 
 	secretMap := map[string]map[string]string{
 		"master": {
@@ -67,17 +72,10 @@ func RunCertInstallCmd(config util.DeploymentProperties, machineType, destinatio
 		log.Fatalln("don't have a secret list for", machineType)
 	}
 
-	client := &autorest.Client{}
-
-	client.Authorizer, err = util.GetAuthorizerInAzure(config, azure.AzureResourceManagerScope)
-	if err != nil {
-		panic(err)
-	}
-
 	for secretName, secretPath := range secrets {
 		log.Println("retrieving secret:", secretName)
 
-		secretValue, err := util.GetSecret(config, client, secretName)
+		secretValue, err := d.GetSecret(deployProperties.VaultConfig.Name, secretName)
 		if err != nil {
 			// TODO(colemickens): retry?
 			panic(err)

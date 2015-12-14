@@ -1,0 +1,124 @@
+hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+updated: 2015-12-11T17:37:39.390950518-08:00
+imports:
+- name: github.com/akavel/rsrc
+  version: ba14da1f827188454a4591717fff29999010887f
+  subpackages:
+  - binutil
+  - coff
+- name: github.com/armon/consul-api
+  version: dcfedd50ed5334f96adee43fc88518a4f095e15c
+- name: github.com/Azure/azure-sdk-for-go
+  version: 84843207ea0c77c8c8aecbe2e16ac77caa8ce9cc
+  subpackages:
+  - /arm/resources
+- name: github.com/Azure/go-autorest
+  version: 1f936b9ddc048ff77c5723a3837a9667120d30c5
+  subpackages:
+  - autorest
+- name: github.com/BurntSushi/toml
+  version: 056c9bc7be7190eaa7715723883caffa5f8fa3e4
+- name: github.com/cloudflare/cf-tls
+  version: 28cbf4e4c1f859789a26b308eb8b684f34f38312
+  subpackages:
+  - tls
+- name: github.com/cloudflare/cfssl
+  version: 755f4128c7c69bad69117e44ffa028c1847a0608
+  subpackages:
+  - /initca
+  - /csr
+- name: github.com/cloudflare/go-metrics
+  version: f009caf6e47cccc4641d4252277f4af0196d89c4
+- name: github.com/cloudflare/redoctober
+  version: b7956979f4570593d6057b3b950b0ba295a6b819
+  subpackages:
+  - client
+  - core
+  - cryptor
+  - ecdh
+  - keycache
+  - padding
+  - passvault
+  - symcrypt
+- name: github.com/coreos/go-etcd
+  version: 003851be7bb0694fe3cc457a49529a19388ee7cf
+- name: github.com/coreos/go-systemd
+  version: 9845c0f8acc9ebffec4b9196267e5eaa0887ba11
+- name: github.com/cpuguy83/go-md2man
+  version: 71acacd42f85e5e82f70a55327789582a5200a90
+- name: github.com/daaku/go.zipexe
+  version: a5fe2436ffcb3236e175e5149162b41cd28bd27d
+- name: github.com/davecgh/go-spew
+  version: 2df174808ee097f90d259e432cc04442cf60be21
+  subpackages:
+  - spew
+- name: github.com/dgrijalva/jwt-go
+  version: f164e17f59b82642a3895ba065c385db6c547344
+- name: github.com/GeertJohan/go.incremental
+  version: 92fd0ce4a694213e8b3dfd2d39b16e51d26d0fbf
+- name: github.com/GeertJohan/go.rice
+  version: ada95a01c963696fb73320ee662195af68be81ae
+- name: github.com/godbus/dbus
+  version: a1b8ba5163b7f041b22761461eabd02b70d1f824
+- name: github.com/google/certificate-transparency
+  version: 3f987269ebe76f2bf3bbf88e10d21a45f4bffb04
+  subpackages:
+  - go
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/jessevdk/go-flags
+  version: fc93116606d0a71d7e9de0ad5734fdb4b8eae834
+- name: github.com/jmhodges/clock
+  version: 3c4ebd218625c9364c33db6d39c276d80c3090c6
+- name: github.com/kardianos/osext
+  version: 6e7f843663477789fac7c02def0d0909e969b4e5
+- name: github.com/kr/pretty
+  version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
+- name: github.com/kr/pty
+  version: f7ee69f31298ecbe5d2b349c711e2547a617d398
+- name: github.com/kr/text
+  version: bb797dc4fb8320488f47bf11de07a733d7233e1f
+- name: github.com/magiconair/properties
+  version: 84ea5e93a95c5e0115f3a4f3e141448584f48f37
+- name: github.com/mattn/go-sqlite3
+  version: 2513631704612107a1c8b1803fb8e6b3dda2230e
+- name: github.com/miekg/pkcs11
+  version: 80f102b5cac759de406949c47f0928b99bd64cdf
+- name: github.com/mitchellh/mapstructure
+  version: 281073eb9eb092240d33ef253c404f1cca550309
+- name: github.com/mreiferson/go-httpclient
+  version: 63fe23f7434723dc904c901043af07931f293c47
+- name: github.com/rcrowley/go-metrics
+  version: 1ce93efbc8f9c568886b2ef85ce305b2217b3de3
+- name: github.com/russross/blackfriday
+  version: 3c4a488adacb62604e7e4a16764d7480aa995773
+- name: github.com/shurcooL/sanitized_anchor_name
+  version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
+- name: github.com/spf13/cast
+  version: ee815aaf958c707ad07547cd62150d973710f747
+- name: github.com/spf13/cobra
+  version: 1c44ec8d3f1552cac48999f9306da23c4d8a288b
+- name: github.com/spf13/jwalterweatherman
+  version: c2aa07df593850a04644d77bb757d002e517a296
+- name: github.com/spf13/pflag
+  version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
+- name: github.com/spf13/viper
+  version: e3bc06f20c7a60e8042d3f8741551ce606d31c40
+- name: github.com/stathat/go
+  version: 01d012b9ee2ecc107cb28b6dd32d9019ed5c1d77
+- name: github.com/ugorji/go
+  version: 74d8be59e086d89e61bbb984d73428b96f78d44c
+  repo: https://github.com/ugorji/go
+- name: github.com/xordataexchange/crypt
+  version: 749e360c8f236773f28fc6d3ddfce4a470795227
+- name: golang.org/x/crypto
+  version: 346896d57731cb5670b36c6178fc5519f3225980
+  subpackages:
+  - pkcs12
+- name: gopkg.in/check.v1
+  version: 11d3bc7aa68e238947792f30573146a3231fc0f1
+- name: gopkg.in/fsnotify.v1
+  version: 2cdd39bd6129c6a49c74fb07fb9d77ba1271c572
+- name: gopkg.in/yaml.v2
+  version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
+devImports: []

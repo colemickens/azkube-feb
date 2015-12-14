@@ -4,10 +4,10 @@ import ()
 
 // TODO(colemickens): replace this with cfssl whenever pkcs12 output support lands
 
-func GenerateSsh(destination string) error {
-	return nil
+func (d *Deployer) GenerateSsh(destination string) (sshProperties *SshProperties, err error) {
+	return nil, nil
 }
 
-func GeneratePki(destination string) error {
-	return nil
+func (d *Deployer) GeneratePki(destination string) (pkiProperties *PkiProperties, err error) {
+	return nil, nil
 }

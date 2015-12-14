@@ -6,9 +6,9 @@ import (
 	"log"
 	"path"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/azure-sdk-for-go/arm/resources"
+	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
+	// "github.com/Azure/azure-sdk-for-go/arm/resources"
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
 )
@@ -28,25 +28,17 @@ func NewDeployCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting deploy command")
 
-			var configIn util.DeploymentConfig
+			var deployConfig util.DeploymentConfig
 			configContents, err := ioutil.ReadFile(configPath)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			err = json.Unmarshal(configContents, &configIn)
+			err = json.Unmarshal(configContents, &deployConfig)
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			var config util.DeploymentProperties
-			config.DeploymentConfig = configIn
-			config.App.AppName = config.ResourceGroup + "-app"
-			config.App.AppURL = "http://" + config.App.AppName + "/"
-			config.Vault.Name = config.ResourceGroup + "-vault"
-			config.ClientNames = []string{"default"}
-			config.MasterFqdn = getMasterFQDN(config)
-
-			RunDeployCmd(config, outputPath)
+			RunDeployCmd(deployConfig, outputPath)
 			log.Println("finished deploy command")
 		},
 	}
@@ -57,54 +49,52 @@ func NewDeployCmd() *cobra.Command {
 	return deployCmd
 }
 
-func RunDeployCmd(config util.DeploymentProperties, outputPath string) {
-	util.EnsureResourceGroup(config, true)
+func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
+	// TODO(colemickens): make Deployer created universally
+	// with flexing auth for inside-of- and outside-of- Azure
+	d, err := util.NewDeployerWithSecret("a", "b", "c", "d")
 
-	config.Pki, err := util.GeneratePki(path.Join(outputPath, "pki"))
+	_, err = d.EnsureResourceGroup(deployConfig.ResourceGroup, deployConfig.Location, true)
+	if err != nil {
+		panic(err)
+	}
+
+	d.State.Pki, err = d.GeneratePki(path.Join(outputPath, "pki"))
 	if err != nil {
 		panic(err)
 	}
 
 	// TODO: create active directory app
-	config.App, err = util.CreateApp(config, configIn.AppName, configIn.AppURL)
+	d.State.App, err = d.CreateApp(deployConfig.AppName, deployConfig.AppURL)
 	if err != nil {
 		panic(err)
 	}
 
-	err = util.GenerateSsh(path.Join(outputPath, "ssh"))
+	d.State.Ssh, err = d.GenerateSsh(path.Join(outputPath, "ssh"))
 	if err != nil {
 		panic(err)
 	}
 
-	vaultTemplate := util.CreateVaultTemplate(config)
-	vaultParams := make(map[string]interface{})
+	vaultTemplate, err := d.PopulateTemplate(util.VaultTemplate)
 
-	deployClient := resources.NewDeploymentsClient(config.SubscriptionID)
-	deployClient.Authorizer, err = util.GetAuthorizer(config, azure.AzureResourceManagerScope)
+	_, err = d.DoDeployment("vault", vaultTemplate, true)
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = util.DoDeployment(config, "vault", vaultTemplate, vaultParams, true)
+	d.State.Secrets, err = d.UploadSecrets(d.State.VaultConfig.Name)
 	if err != nil {
 		panic(err)
 	}
 
-	vaultClient := &autorest.Client{}
-	vaultClient.Authorizer, err = util.GetAuthorizer(config, util.AzureVaultScope)
+	d.State.MyriadConfig, err = d.LoadMyriadCloudConfigs()
 	if err != nil {
 		panic(err)
 	}
 
-	config.Secrets.ServicePrincipalSecretURL, err = util.UploadSecrets(config, vaultClient)
-	if err != nil {
-		panic(err)
-	}
+	myriadTemplate := d.PopulateTemplate(util.MyriadTemplate)
 
-	myriadTemplate := util.CreateMyriadTemplate(config)
-	myriadParams := make(map[string]interface{})
-
-	_, err = util.DoDeployment(config, "myriad", myriadTemplate, myriadParams, true)
+	_, _, err = d.DoDeployment("myriad", myriadTemplate, true)
 	if err != nil {
 		panic(err)
 	}
@@ -112,8 +102,8 @@ func RunDeployCmd(config util.DeploymentProperties, outputPath string) {
 	log.Println("done")
 }
 
-func getMasterFQDN(config util.DeploymentProperties) string {
+func getMasterFQDN(deployProperties util.DeploymentProperties) string {
 	// TODO: this should be overrideable
 	// TODO: or add SAN support
-	return config.ResourceGroup + "-master." + config.Location + ".cloudapp.azure.com"
+	return d.State.ResourceGroup + "-master." + d.State.Location + ".cloudapp.azure.com"
 }

@@ -2,11 +2,6 @@ package util
 
 import ()
 
-func CreateApp(config DeploymentProperties) (servicePricipalObjectID string, err error) {
-	// ad app create
-
-	// ad sp create
-
-	// role assignment create
-	return "", nil
+func (d *Deployer) CreateApp(appName, appURL string) (appProperties *AppProperties, err error) {
+	return nil, nil
 }

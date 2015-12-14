@@ -22,7 +22,7 @@ type Secret struct {
 
 var cachedVaultClient *autorest.Client = nil
 
-func putSecret(config DeploymentProperties, client *autorest.Client, secretPath, secretName string) (secretURL string, err error) {
+func (d *Deployer) PutSecret(vaultName, secretName, secretPath string) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
 	pathParams := map[string]interface{}{
@@ -33,7 +33,7 @@ func putSecret(config DeploymentProperties, client *autorest.Client, secretPath,
 		Id string `json:"id"`
 	}
 
-	baseURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.Vault.Name, 1)
+	baseURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", vaultName, 1)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
@@ -46,14 +46,14 @@ func putSecret(config DeploymentProperties, client *autorest.Client, secretPath,
 		return "", err
 	}
 
-	resp, err := client.Send(req, http.StatusOK)
+	resp, err := d.VaultClient.Send(req, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
 
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
+		d.VaultClient.ByInspecting(),
 		autorest.WithErrorUnlessOK(),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -67,7 +67,8 @@ func putSecret(config DeploymentProperties, client *autorest.Client, secretPath,
 	return "", nil
 }
 
-func UploadSecrets(config DeploymentProperties, client *autorest.Client) (ServicePrincipalSecretURL string, err error) {
+func (d *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsProperties, err error) {
+	// TODO(colemickens): populate this from the same place that is consumed from
 	secrets := map[string]string{
 		"pki/ca.crt":                               "ca-crt",
 		"pki/apiserver.crt":                        "apiserver-crt",
@@ -80,26 +81,30 @@ func UploadSecrets(config DeploymentProperties, client *autorest.Client) (Servic
 		"pki/master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
 	}
 
-	servicePrincipalSecretURL, err := putSecret(
-		config,
-		client,
+	servicePrincipalSecretURL, err := d.PutSecret(
+		vaultName,
+		"servicePrincipal-pfx",
 		"pki/servicePrincipal.pfx",
-		"servicePrincipal-pfx")
+	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for secretPath, secretName := range secrets {
-		_, err = putSecret(config, client, secretPath, secretName)
+		_, err = d.PutSecret(vaultName, secretName, secretPath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	return servicePrincipalSecretURL, nil
+	secretsProperties = &SecretsProperties{
+		ServicePrincipalSecretURL: servicePrincipalSecretURL,
+	}
+
+	return secretsProperties, nil
 }
 
-func GetSecret(config DeploymentProperties, client *autorest.Client, secretName string) (*string, error) {
+func (d *Deployer) GetSecret(vaultName, secretName string) (*string, error) {
 	p := map[string]interface{}{
 		"secret-name":    secretName,
 		"secret-version": "",
@@ -108,7 +113,7 @@ func GetSecret(config DeploymentProperties, client *autorest.Client, secretName 
 		"api-version": AzureVaultApiVersion,
 	}
 
-	secretURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", config.Vault.Name, -1)
+	secretURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", vaultName, -1)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsGet(),
@@ -120,7 +125,7 @@ func GetSecret(config DeploymentProperties, client *autorest.Client, secretName 
 		panic(err)
 	}
 
-	resp, err := client.Send(req, http.StatusOK)
+	resp, err := d.VaultClient.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,10 @@
 package util
 
+import (
+	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/azure-sdk-for-go/arm/resources"
+)
+
 type DeploymentConfig struct {
 	Name                 string
 	MasterVmSize         string
@@ -9,6 +14,8 @@ type DeploymentConfig struct {
 	Username             string
 	TenantID             string
 	SubscriptionID       string
+	AppName              string
+	AppURL               string
 	ResourceGroup        string
 	Location             string
 	DeployerObjectID     string
@@ -32,10 +39,6 @@ type AppProperties struct {
 	ServicePrincipalObjectID string
 }
 
-type VaultProperties struct {
-	Name string
-}
-
 type SecretsProperties struct {
 	ServicePrincipalSecretURL string
 }
@@ -56,29 +59,38 @@ type KubernetesProperties struct {
 	HyperkubeContainerSpec string
 }
 
-type CloudConfigProperties struct {
-	Master string
-	Node   string
+type Deployer struct {
+	Config DeploymentConfig
+	State  DeploymentProperties
+
+	DeploymentsClient resources.DeploymentsClient
+	GroupsClient      resources.GroupsClient
+	VaultClient       autorest.Client
 }
 
 // appears in same order as in myriad variables
 type DeploymentProperties struct {
-	DeploymentConfig
+	Pki *PkiProperties
+	Ssh *SshProperties
 
-	Pki PkiProperties
-	Ssh SshProperties
+	App        *AppProperties
+	Secrets    *SecretsProperties
+	Network    *NetworkProperties
+	Kubernetes *KubernetesProperties
 
-	App        AppProperties
-	Vault      VaultProperties
-	Secrets    SecretsProperties
-	Network    NetworkProperties
-	Kubernetes KubernetesProperties
-
-	CloudConfig CloudConfigProperties
+	VaultConfig  *VaultConfig
+	MyriadConfig *MyriadConfig
 }
 
 type VaultConfig struct {
-	Name string
+	Name                     string
+	ServicePrincipalObjectID string
+	DeployerObjectID         string
+}
+
+type MyriadConfig struct {
+	MasterCloudConfig string
+	NodeCloudConfig   string
 }
 
 type ScaleConfig struct {
