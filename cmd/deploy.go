@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"path"
+	"os"
+	"path/filepath"
 
 	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
@@ -44,22 +45,50 @@ func NewDeployCmd() *cobra.Command {
 	}
 
 	deployCmd.Flags().StringVarP(&configPath, "config", "c", "/etc/kubernetes/azure.json", "path to config")
-	deployCmd.Flags().StringVarP(&outputPath, "output", "o", "./", "where to place output")
+	deployCmd.Flags().StringVarP(&outputPath, "output", "o", "./deploy-output", "where to place output")
 
 	return deployCmd
 }
 
 func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 	// TODO(colemickens): make Deployer created universally
-	// with flexing auth for inside-of- and outside-of- Azure
-	d, err := util.NewDeployerWithSecret("a", "b", "c", "d")
+	d, err := util.NewDeployerWithToken(
+		deployConfig.SubscriptionID,
+		deployConfig.TenantID,
+		deployConfig.DeployerClientID,
+		deployConfig.DeployerClientSecret,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	d.Config = deployConfig
+
+	// TODO: fix config
+	d.State.VaultName = deployConfig.VaultName
+
+	d.State.Ssh, err = d.GenerateSsh()
+	if err != nil {
+		panic(err)
+	}
+
+	sshDirectory := filepath.Join(outputPath, "ssh")
+	sshPrivateKeyPath := filepath.Join(sshDirectory, "id_rsa")
+	err = os.MkdirAll(sshDirectory, 0777)
+	if err != nil {
+		panic(err)
+	}
+	err = ioutil.WriteFile(sshPrivateKeyPath, d.State.Ssh.PrivateKeyPem, 0644)
+	if err != nil {
+		panic(err)
+	}
 
 	_, err = d.EnsureResourceGroup(deployConfig.ResourceGroup, deployConfig.Location, true)
 	if err != nil {
 		panic(err)
 	}
 
-	d.State.Pki, err = d.GeneratePki(path.Join(outputPath, "pki"))
+	d.State.Pki, err = d.GeneratePki()
 	if err != nil {
 		panic(err)
 	}
@@ -70,19 +99,20 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 		panic(err)
 	}
 
-	d.State.Ssh, err = d.GenerateSsh(path.Join(outputPath, "ssh"))
+	vaultTemplate, err := d.PopulateTemplate(util.VaultTemplate)
 	if err != nil {
 		panic(err)
 	}
 
-	vaultTemplate, err := d.PopulateTemplate(util.VaultTemplate)
+	vts, _ := json.Marshal(vaultTemplate)
+	ioutil.WriteFile("/home/cole/test.txt.txt", vts, 0777)
 
 	_, err = d.DoDeployment("vault", vaultTemplate, true)
 	if err != nil {
 		panic(err)
 	}
 
-	d.State.Secrets, err = d.UploadSecrets(d.State.VaultConfig.Name)
+	d.State.Secrets, err = d.UploadSecrets(d.Config.VaultName)
 	if err != nil {
 		panic(err)
 	}
@@ -92,9 +122,12 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 		panic(err)
 	}
 
-	myriadTemplate := d.PopulateTemplate(util.MyriadTemplate)
+	myriadTemplate, err := d.PopulateTemplate(util.MyriadTemplate)
+	if err != nil {
+		panic(err)
+	}
 
-	_, _, err = d.DoDeployment("myriad", myriadTemplate, true)
+	_, err = d.DoDeployment("myriad", myriadTemplate, true)
 	if err != nil {
 		panic(err)
 	}
@@ -102,8 +135,8 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 	log.Println("done")
 }
 
-func getMasterFQDN(deployProperties util.DeploymentProperties) string {
+func getMasterFQDN(d *util.DeploymentConfig) string {
 	// TODO: this should be overrideable
 	// TODO: or add SAN support
-	return d.State.ResourceGroup + "-master." + d.State.Location + ".cloudapp.azure.com"
+	return d.ResourceGroup + "-master." + d.Location + ".cloudapp.azure.com"
 }

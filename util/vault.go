@@ -20,8 +20,6 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
-var cachedVaultClient *autorest.Client = nil
-
 func (d *Deployer) PutSecret(vaultName, secretName, secretPath string) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
@@ -46,14 +44,14 @@ func (d *Deployer) PutSecret(vaultName, secretName, secretPath string) (secretUR
 		return "", err
 	}
 
-	resp, err := d.VaultClient.Send(req, http.StatusOK)
+	resp, err := d.AdClient.Send(req, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
 
 	err = autorest.Respond(
 		resp,
-		d.VaultClient.ByInspecting(),
+		d.AdClient.ByInspecting(),
 		autorest.WithErrorUnlessOK(),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -125,7 +123,7 @@ func (d *Deployer) GetSecret(vaultName, secretName string) (*string, error) {
 		panic(err)
 	}
 
-	resp, err := d.VaultClient.Send(req, http.StatusOK)
+	resp, err := d.AdClient.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}

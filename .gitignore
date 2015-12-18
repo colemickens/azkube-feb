@@ -1,3 +1,4 @@
 testdata/
 azkube
 vendor/*
+deploy-output

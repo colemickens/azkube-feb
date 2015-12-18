@@ -13,77 +13,15 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-const (
-// TODO eliminate
-// see vault.go
-// AzureVaultScope = "https://vault.azure.com"
-)
-
-// TODO(colemickens): eliminate some code duplication with ServicePrincipalSecret
-
-func NewDeployerWithSecret(subscriptionID, tenantID, clientID, clientSecret string) (deployer *Deployer, err error) {
-	deployer = newDeployer(subscriptionID)
-
-	resourcesScopeSpt, err := withSecretAndScope(tenantID, clientID, clientSecret, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-	vaultScopeSpt, err := withSecretAndScope(tenantID, clientID, clientSecret, AzureVaultScope)
-	if err != nil {
-		return nil, err
+func NewDeployerWithToken(subscriptionID, tenantID, clientID, clientSecret string) (deployer *Deployer, err error) {
+	secret := &azure.ServicePrincipalTokenSecret{
+		ClientSecret: clientSecret,
 	}
 
-	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
-	deployer.GroupsClient.Authorizer = resourcesScopeSpt
-	deployer.VaultClient.Authorizer = vaultScopeSpt
-
-	return deployer, nil
+	return newDeployer(subscriptionID, tenantID, clientID, secret)
 }
 
 func NewDeployerWithCertificate(subscriptionID, tenantID, appURL, certPath, keyPath string) (deployer *Deployer, err error) {
-	deployer = newDeployer(subscriptionID)
-
-	resourcesScopeSpt, err := withCertAndScope(tenantID, appURL, certPath, keyPath, azure.AzureResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-	vaultScopeSpt, err := withCertAndScope(tenantID, appURL, certPath, keyPath, AzureVaultScope)
-	if err != nil {
-		return nil, err
-	}
-
-	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
-	deployer.GroupsClient.Authorizer = resourcesScopeSpt
-	deployer.VaultClient.Authorizer = vaultScopeSpt
-
-	return deployer, nil
-}
-
-func newDeployer(subscriptionID string) (deployer *Deployer) {
-	deployer = &Deployer{}
-	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
-	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
-	deployer.VaultClient = autorest.Client{}
-	return deployer
-}
-
-func withSecretAndScope(tenantID, clientID, clientSecret, scope string) (spt *azure.ServicePrincipalToken, err error) {
-	spt, err = azure.NewServicePrincipalToken(
-		clientID,
-		tenantID,
-		scope,
-		clientSecret,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(colemickens): refresh token here so we blow up during init and not later
-
-	return spt, nil
-}
-
-func withCertAndScope(tenantID, appURL, certPath, keyPath, scope string) (spt *azure.ServicePrincipalToken, err error) {
 	certificateData, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		log.Fatalln("failed", err)
@@ -104,16 +42,58 @@ func withCertAndScope(tenantID, appURL, certPath, keyPath, scope string) (spt *a
 		panic(err)
 	}
 
-	spt, err = azure.NewServicePrincipalTokenFromCertificate(
-		appURL,
-		certificate,
-		privateKey,
+	secret := &azure.ServicePrincipalCertificateSecret{
+		Certificate: certificate,
+		PrivateKey:  privateKey,
+	}
+
+	return newDeployer(subscriptionID, tenantID, appURL, secret)
+}
+
+func withSecret(tenantID, clientID, scope string, secret azure.ServicePrincipalSecret) (spt *azure.ServicePrincipalToken, err error) {
+	spt, err = azure.NewServicePrincipalTokenWithSecret(
+		clientID,
 		tenantID,
-		AzureVaultScope)
+		scope,
+		secret,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO(colemickens): refresh token here so we blow up during init and not later
+	err = spt.Refresh()
+	if err != nil {
+		return nil, err
+	}
 
-	return spt, err
+	return spt, nil
+}
+
+func newDeployer(subscriptionID, tenantID, clientID string, secret azure.ServicePrincipalSecret) (deployer *Deployer, err error) {
+	deployer = &Deployer{}
+	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
+	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
+	deployer.VaultClient = autorest.Client{}
+
+	resourcesScopeSpt, err := withSecret(tenantID, clientID, azure.AzureResourceManagerScope, secret)
+	if err != nil {
+		return nil, err
+	}
+	vaultScopeSpt, err := withSecret(tenantID, clientID, AzureVaultScope, secret)
+	if err != nil {
+		return nil, err
+	}
+	adScopeSpt, err := withSecret(tenantID, clientID, AzureActiveDirectoryScope, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
+	deployer.GroupsClient.Authorizer = resourcesScopeSpt
+	deployer.VaultClient.Authorizer = vaultScopeSpt
+	deployer.AdClient.Authorizer = adScopeSpt
+
+	return deployer, nil
 }
 
 func parseRsaPrivateKey(path string) (*rsa.PrivateKey, error) {

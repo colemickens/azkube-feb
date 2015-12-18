@@ -6,18 +6,23 @@ import (
 )
 
 type DeploymentConfig struct {
-	Name                 string
-	MasterVmSize         string
-	NodeVmSize           string
-	InitialNodeCount     int
-	MasterFqdn           string
-	Username             string
-	TenantID             string
-	SubscriptionID       string
-	AppName              string
-	AppURL               string
-	ResourceGroup        string
-	Location             string
+	Name             string
+	ResourceGroup    string
+	Location         string
+	MasterVmSize     string
+	NodeVmSize       string
+	InitialNodeCount int
+
+	MasterFqdn string
+	Username   string
+
+	VaultName string
+
+	TenantID       string
+	SubscriptionID string
+	AppName        string
+	AppURL         string
+
 	DeployerObjectID     string
 	DeployerClientID     string
 	DeployerClientSecret string
@@ -30,13 +35,17 @@ type PkiProperties struct {
 }
 
 type SshProperties struct {
-	SshPublicKeyData64 string
+	OpenSshPublicKey string
+	PrivateKeyPem    []byte
 }
 
 type AppProperties struct {
-	AppURL                   string
-	AppName                  string
-	ServicePrincipalObjectID string
+	AppURL                         string
+	AppName                        string
+	ApplicationID                  string
+	ServicePrincipalCertificatePem string
+	ServicePrincipalPrivateKeyPem  string
+	ServicePrincipalObjectID       string
 }
 
 type SecretsProperties struct {
@@ -66,6 +75,7 @@ type Deployer struct {
 	DeploymentsClient resources.DeploymentsClient
 	GroupsClient      resources.GroupsClient
 	VaultClient       autorest.Client
+	AdClient          autorest.Client
 }
 
 // appears in same order as in myriad variables
@@ -73,27 +83,17 @@ type DeploymentProperties struct {
 	Pki *PkiProperties
 	Ssh *SshProperties
 
+	VaultName string
+
 	App        *AppProperties
 	Secrets    *SecretsProperties
 	Network    *NetworkProperties
 	Kubernetes *KubernetesProperties
 
-	VaultConfig  *VaultConfig
 	MyriadConfig *MyriadConfig
-}
-
-type VaultConfig struct {
-	Name                     string
-	ServicePrincipalObjectID string
-	DeployerObjectID         string
 }
 
 type MyriadConfig struct {
 	MasterCloudConfig string
 	NodeCloudConfig   string
-}
-
-type ScaleConfig struct {
-	NodeVmssName string
-	NodeCount    int
 }

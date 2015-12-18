@@ -26,8 +26,8 @@ func init() {
 		return template.Must(template.New(z).Parse(contents))
 	}
 
-	MasterCloudConfigTemplate = x("templates/coreos/master.cloudconfig.in.yaml", "masterCloudConfigTemplate")
-	NodeCloudConfigTemplate = x("templates/coreos/node.cloudconfig.in.yaml", "nodeCloudConfigTemplate")
+	MasterCloudConfigTemplate = x("templates/coreos/master-cloudconfig.in.yml", "masterCloudConfigTemplate")
+	NodeCloudConfigTemplate = x("templates/coreos/node-cloudconfig.in.yml", "nodeCloudConfigTemplate")
 	VaultTemplate = x("templates/vault/vault.in.json", "vaultTemplate")
 	MyriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate")
 	ScaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate")

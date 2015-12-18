@@ -121,7 +121,7 @@ coreos:
                     -v /var/lib/docker/:/var/lib/docker:ro \
                     -v /var/lib/kubelet/:/var/lib/kubelet:rw \
                     -v /etc/kubernetes/:/etc/kubernetes/:rw \
-                    {{HYPERKUBE_CONTAINER}} \
+                    {{.Kubernetes.HyperkubeContainerSpec}} \
                       /hyperkube kubelet \
                         --containerized \
                         --api-servers=https://{{.MasterFqdn}}:6443 \

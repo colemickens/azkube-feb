@@ -10,3 +10,6 @@ import:
   - /initca
   - /csr
 - package: github.com/spf13/cobra
+- package: code.google.com/p/go-uuid
+  subpackages:
+  - /uuid

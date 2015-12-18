@@ -75,7 +75,8 @@ func RunCertInstallCmd(deployProperties util.DeploymentProperties, machineType, 
 	for secretName, secretPath := range secrets {
 		log.Println("retrieving secret:", secretName)
 
-		secretValue, err := d.GetSecret(deployProperties.VaultConfig.Name, secretName)
+		// TODO (colemickens): fix this!shit
+		secretValue, err := d.GetSecret(d.Config.VaultName, secretName)
 		if err != nil {
 			// TODO(colemickens): retry?
 			panic(err)

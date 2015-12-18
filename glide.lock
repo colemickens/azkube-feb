@@ -1,6 +1,10 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-11T17:37:39.390950518-08:00
+updated: 2015-12-17T16:34:46.72555668-08:00
 imports:
+- name: code.google.com/p/go-uuid
+  version: 35bc42037350
+  subpackages:
+  - /uuid
 - name: github.com/akavel/rsrc
   version: ba14da1f827188454a4591717fff29999010887f
   subpackages:
@@ -43,7 +47,7 @@ imports:
 - name: github.com/coreos/go-etcd
   version: 003851be7bb0694fe3cc457a49529a19388ee7cf
 - name: github.com/coreos/go-systemd
-  version: 9845c0f8acc9ebffec4b9196267e5eaa0887ba11
+  version: a831f36d09de8f095c28eeee839df52e9de5031f
 - name: github.com/cpuguy83/go-md2man
   version: 71acacd42f85e5e82f70a55327789582a5200a90
 - name: github.com/daaku/go.zipexe
@@ -64,6 +68,9 @@ imports:
   version: 3f987269ebe76f2bf3bbf88e10d21a45f4bffb04
   subpackages:
   - go
+- name: github.com/hashicorp/hcl
+  version: 5af5025c48e8bf0e03551b8757d92a774b9f0694
+  repo: https://github.com/hashicorp/hcl
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jessevdk/go-flags
@@ -91,7 +98,7 @@ imports:
 - name: github.com/rcrowley/go-metrics
   version: 1ce93efbc8f9c568886b2ef85ce305b2217b3de3
 - name: github.com/russross/blackfriday
-  version: 3c4a488adacb62604e7e4a16764d7480aa995773
+  version: d18b67ae0afd61dae240896eae1785f00709aa31
 - name: github.com/shurcooL/sanitized_anchor_name
   version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
 - name: github.com/spf13/cast
@@ -103,12 +110,11 @@ imports:
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/spf13/viper
-  version: e3bc06f20c7a60e8042d3f8741551ce606d31c40
+  version: 79971f1ae71e74d2e814b9b4bb91fb59b0263654
 - name: github.com/stathat/go
   version: 01d012b9ee2ecc107cb28b6dd32d9019ed5c1d77
 - name: github.com/ugorji/go
-  version: 74d8be59e086d89e61bbb984d73428b96f78d44c
-  repo: https://github.com/ugorji/go
+  version: cd43bdd6be4b5675a0d1e75c4af55ee1dc0d9c5e
 - name: github.com/xordataexchange/crypt
   version: 749e360c8f236773f28fc6d3ddfce4a470795227
 - name: golang.org/x/crypto
@@ -118,7 +124,7 @@ imports:
 - name: gopkg.in/check.v1
   version: 11d3bc7aa68e238947792f30573146a3231fc0f1
 - name: gopkg.in/fsnotify.v1
-  version: 2cdd39bd6129c6a49c74fb07fb9d77ba1271c572
+  version: 508915b7500b6e42a87132e4afeb4729cebc7cbb
 - name: gopkg.in/yaml.v2
   version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
 devImports: []
