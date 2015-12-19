@@ -3,9 +3,8 @@
 	"contentVersion": "1.0.0.0",
 	"variables": {
 		"vaultName": "{{.VaultName}}",
-		"tenantId": "{{.App.TenantId}}",
-		"deployerObjectId": "{{.App.DeployerObjectId}}",
-		"servicePrincipalObjectId": "{{.App.ServicePrincipalObjectId}}"
+		"tenantId": "{{.TenantId}}",
+		"servicePrincipalObjectId": "{{.ServicePrincipalObjectId}}"
 	},
 	"resources": [
 		{
@@ -16,14 +15,6 @@
 				"enabledForDiskEncryption": "false",
 				"tenantId": "[variables('tenantId')]",
 				"accessPolicies": [
-					{
-						"tenantId": "[variables('tenantId')]",
-						"objectId": "[variables('deployerObjectId')]",
-						"permissions": {
-							"keys": "all",
-							"secrets": "all"
-						}
-					},
 					{
 						"tenantId": "[variables('tenantId')]",
 						"objectId": "[variables('servicePrincipalObjectId')]",

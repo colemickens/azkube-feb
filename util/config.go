@@ -1,8 +1,12 @@
 package util
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
+	kapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 )
 
 type DeploymentConfig struct {
@@ -30,8 +34,12 @@ type DeploymentConfig struct {
 }
 
 type PkiProperties struct {
-	ServicePrincipalFingerprint string
-	ServicePrincipalPfx64       string
+	CACertificate                   x509.Certificate
+	ApiServerCertificate            x509.Certificate
+	KubeletKubeconfig               kapi.Config
+	KubeproxyKubeconfig             kapi.Config
+	SchedulerKubeconfig             kapi.Config
+	ReplicationControllerKubeconfig kapi.Config
 }
 
 type SshProperties struct {
@@ -40,12 +48,12 @@ type SshProperties struct {
 }
 
 type AppProperties struct {
-	AppURL                         string
-	AppName                        string
-	ApplicationID                  string
-	ServicePrincipalCertificatePem string
-	ServicePrincipalPrivateKeyPem  string
-	ServicePrincipalObjectID       string
+	ID                          string
+	Name                        string
+	IdentifierURL               string
+	ServicePrincipalCertificate x509.Certificate
+	ServicePrincipalPrivateKey  rsa.PrivateKey
+	ServicePrincipalObjectID    string
 }
 
 type SecretsProperties struct {
@@ -83,8 +91,6 @@ type DeploymentProperties struct {
 	Pki *PkiProperties
 	Ssh *SshProperties
 
-	VaultName string
-
 	App        *AppProperties
 	Secrets    *SecretsProperties
 	Network    *NetworkProperties
@@ -96,4 +102,45 @@ type DeploymentProperties struct {
 type MyriadConfig struct {
 	MasterCloudConfig string
 	NodeCloudConfig   string
+}
+
+type VaultTemplateInput struct {
+	VaultName                string
+	TenantID                 string
+	ServicePrincipalObjectId string
+}
+
+type CloudConfigTemplateInput struct {
+	DeploymentName string
+
+	ConfigFile             string
+	HyperkubeContainerSpec string
+
+	ServiceCidr string
+	PodCidr     string
+
+	MasterIP   string
+	MasterFQDN string
+
+	DnsServiceIP string
+}
+
+type MyriadTemplateInput struct {
+	DeploymentName string
+
+	MasterVmSize         string
+	NodeVmSize           string
+	NodeVmssInitialCount int
+	Username             string
+
+	VaultName                 string
+	ServicePrincipalSecretURL string
+
+	PodCidr     string
+	ServiceCidr string
+
+	SshPublicKeyData string
+
+	MasterCloudConfig string
+	MinionCloudConfig string
 }

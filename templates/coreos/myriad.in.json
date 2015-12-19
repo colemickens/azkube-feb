@@ -10,8 +10,8 @@
 		"nodeVmssInitialCount": "{{.NodeVmssInitialCount}}",
 		"username": "{{.Username}}",
 
-		"vaultName": "{{.Vault.Name}}",
-		"servicePrincipalSecretUrl": "{{.Vault.SecretPrincipalSecretUrl}}",
+		"vaultName": "{{.Name}}",
+		"servicePrincipalSecretUrl": "{{.SecretPrincipalSecretUrl}}",
 
 		"vmNamePrefix": "kube-",
 		"osImagePublisher": "CoreOS",
@@ -20,18 +20,22 @@
 
 		"nsgName": "nsg",
 		"vnetName": "vnet",
-		"vnetCidr": "{{.Network.VnetCidr}}",
-		"subnetName": "subnet1",
-		"subnetCidr": "{{.Network.SubnetCidr}}",
+		"vnetCidr": "10.0.0.0/8",
+		"etcdSubnetName": "etcdSubnet",
+		"etcdSubnetCidr": "10.0.0.0.0/16",
+		"masterSubnetName": "masterSubnet",
+		"masterSubnetCidr": "10.0.0.0/16",
+		"nodeSubnetName": "nodeSubnet",
+		"nodeSubnetCidr": "10.0.0.0/16",
 		"vnetRef": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
-		"subnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('subnetName'))]",
+		"etcdSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('etcdSubnetName'))]",
+		"masterSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('nodeSubnetName'))]",
+		"nodeSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('nodeSubnetName'))]",
 		
-		"podCidr": "{{.Network.PodCidr}}",
-		"serviceCidr": "{{.Network.ServiceCidr}}",
+		"podCidr": "{{.PodCidr}}",
+		"serviceCidr": "{{.ServiceCidr}}",
 
-		"masterPrivateIp": "{{.Network.MasterPrivateIp}}",
-		"apiServiceIp": "{{.Network.ApiServiceIp}}",
-		"dnsServiceIp": "{{.Network.DnsServiceIp}}",
+		"masterPrivateIp": "{{.MasterPrivateIp}}",
 
 		"storageAccountName": "[replace(concat(resourceGroup().name, 'storage'),'-','')]",
 		"storageContainerName": "kube-vm-disks",
@@ -39,8 +43,8 @@
 		
 		"sshAuthorizedKeysPath": "[concat('/home/{{.Username}}/.ssh/authorized_keys')]",
 		"sshPublicKeyData": "{{.SshPublicKeyData}}",
-		"masterCloudConfig": "{{.CloudConfig.Master}}",
-		"nodeCloudConfig": "{{.CloudConfig.Minion}}"
+		"masterCloudConfig": "{{.MasterCloudConfig}}",
+		"nodeCloudConfig": "{{.MinionCloudConfig}}"
 	},
 	"resources": [
 		{

@@ -6,7 +6,7 @@ write_files:
   owner: "root"
   encoding: "base64"
   content: |
-    {{.Json64}}
+    {{.ConfigFile}}
 
 - path: "/etc/kubernetes/manifests/node-components.yaml"
   permissions: "0644"
@@ -21,7 +21,7 @@ write_files:
         "containers": [
           {
             "name": "kube-proxy",
-            "image": "{{.Kubernetes.yperkubeContainerSpec}}",
+            "image": "{{.HyperkubeContainerSpec}}",
             "command": [
               "/hyperkube",
               "proxy",
@@ -41,7 +41,7 @@ write_files:
 
 coreos:
   flannel:
-    etcd_endpoints: "http://{{.MasterIp}}:2379"
+    etcd_endpoints: "http://{{.MasterIP}}:2379"
   units:
     - name: "docker.service"
       command: "start"
@@ -71,16 +71,16 @@ coreos:
                     -v /var/lib/docker/:/var/lib/docker:ro \
                     -v /var/lib/kubelet/:/var/lib/kubelet:rw \
                     -v /etc/kubernetes:/etc/kubernetes:rw \
-                    {{.Kubernetes.HyperkubeContainerSpec}} \
+                    {{.HyperkubeContainerSpec}} \
                       /hyperkube kubelet \
                         --containerized \
-                        --api-servers=https://{{.MasterFqdn}}:6443 \
+                        --api-servers=https://{{.MasterFQDN}}:6443 \
                         --kubeconfig=/etc/kubernetes/node-kubelet-kubeconfig \
                         --address=0.0.0.0 \
                         --allow-privileged=true \
                         --enable-server \
                         --config=/etc/kubernetes/manifests \
-                        --cluster-dns={{.Network.DnsServiceIp}} \
+                        --cluster-dns={{.Network.DnsServiceIP}} \
                         --cluster-domain=cluster.local \
                         --v=2
         ExecStop=/usr/bin/docker stop -t 2 kubelet

@@ -6,7 +6,7 @@ write_files:
   owner: "root"
   encoding: "base64"
   content: |
-    {{.Json64}}
+    {{.ConfigFile}}
 
 - path: "/etc/kubernetes/manifests/master-components.yaml"
   permissions: "0644"
@@ -21,7 +21,7 @@ write_files:
         "containers": [
           {
             "name": "apiserver",
-            "image": "{{.Kubernetes.HyperkubeContainerSpec}}",
+            "image": "{{.HyperkubeContainerSpec}}",
             "command": [
               "/hyperkube",
               "apiserver",
@@ -29,7 +29,7 @@ write_files:
               "--allow-privileged",
               "--insecure-port=8080",
               "--secure-port=6443",
-              "--service-cluster-ip-range={{.Network.ServiceCidr}}",
+              "--service-cluster-ip-range={{.ServiceCidr}}",
               "--etcd-servers=http://127.0.0.1:4001",
               "--cluster-name=kubernetes",
               "--tls-cert-file=/etc/kubernetes/apiserver.crt",
@@ -41,7 +41,7 @@ write_files:
           },
           {
             "name": "controller-manager",
-            "image": "{{.Kubernetes.HyperkubeContainerSpec}}",
+            "image": "{{.HyperkubeContainerSpec}}",
             "command": [
               "/hyperkube",
               "controller-manager",
@@ -52,7 +52,7 @@ write_files:
           },
           {
             "name": "scheduler",
-            "image": "{{.Kubernetes.HyperkubeContainerSpec}}",
+            "image": "{{.HyperkubeContainerSpec}}",
             "command": [
               "/hyperkube",
               "scheduler",
@@ -63,7 +63,7 @@ write_files:
           },
           {
             "name": "kube-proxy",
-            "image": "{{.Kubernetes.HyperkubeContainerSpec}}",
+            "image": "{{.HyperkubeContainerSpec}}",
             "command": [
               "/hyperkube",
               "proxy",
@@ -83,7 +83,7 @@ write_files:
 
 coreos:
   etcd2:
-    advertise-client-urls: "http://{{.Network.MasterPrivateIp}}:2379"
+    advertise-client-urls: "http://{{.MasterPrivateIp}}:2379"
     listen-client-urls: "http://0.0.0.0:2379,http://0.0.0.0:4001"
   units:
     - name: "etcd2.service"
@@ -93,7 +93,7 @@ coreos:
         - name: 50-network-config.conf
           content: |
             [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config "{ \"Network\": \"{{.Network.PodCidr}}\" }"
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config "{ \"Network\": \"{{.PodCidr}}\" }"
       command: "start"
     - name: "docker.service"
       command: "start"
@@ -121,16 +121,16 @@ coreos:
                     -v /var/lib/docker/:/var/lib/docker:ro \
                     -v /var/lib/kubelet/:/var/lib/kubelet:rw \
                     -v /etc/kubernetes/:/etc/kubernetes/:rw \
-                    {{.Kubernetes.HyperkubeContainerSpec}} \
+                    {{.HyperkubeContainerSpec}} \
                       /hyperkube kubelet \
                         --containerized \
-                        --api-servers=https://{{.MasterFqdn}}:6443 \
+                        --api-servers=https://{{.MasterFQDN}}:6443 \
                         --kubeconfig=/etc/kubernetes/master-kubelet-kubeconfig \
                         --address=0.0.0.0 \
                         --allow-privileged=true \
                         --enable-server \
                         --config=/etc/kubernetes/manifests \
-                        --cluster-dns={{.Network.DnsServiceIp}}\
+                        --cluster-dns={{.DnsServiceIp}}\
                         --cluster-domain=cluster.local \
                         --register-node=false \
                         --v=2

@@ -19,8 +19,16 @@ const (
 )
 
 func NewDeployCmd() *cobra.Command {
-	var configPath string
-	var outputPath string
+	var deploymentName string
+	var location string
+	var tenantID string
+	var subscriptionID string
+
+	var appClientId string
+	var appClientCertificatePath string
+	var appClientPrivateKeyPath string
+
+	var outputPath
 
 	var deployCmd = &cobra.Command{
 		Use:   "deploy",
@@ -29,49 +37,99 @@ func NewDeployCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting deploy command")
 
-			var deployConfig util.DeploymentConfig
-			configContents, err := ioutil.ReadFile(configPath)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			err = json.Unmarshal(configContents, &deployConfig)
-			if err != nil {
-				log.Fatalln(err)
+			if useExistingApp {
+				if clientID == "" {
+					panic("must specify clientID when using useExistingApp")
+				}
+
+				if clientCertificatePath = "" {
+					panic("must specify clientCertificatePath when using useExistingApp")
+				}
 			}
 
-			RunDeployCmd(deployConfig, outputPath)
+			if deploymentName == "" {
+				panic("must specify deploymentName")
+			}
+			if tenantID == "" {
+				panic("must specify tenantId")
+			}
+			if subscriptionID == "" {
+				panic("must specify subscriptionId")
+			}
+			if location == "" {
+				panic("must specify location")
+			}
+			if appClientId == "" {
+
+			}
+			if appClientCertificatePath == "" {
+
+			}
+			if appClientPrivateKeyPath == "" {
+
+			}
+
+
+
+			RunDeployCmd(
+				deploymentName,
+				location,
+				tenantID,
+				subscriptionID,
+				,
+				clientID,
+				clientCertificatePath)
+
 			log.Println("finished deploy command")
 		},
 	}
 
-	deployCmd.Flags().StringVarP(&configPath, "config", "c", "/etc/kubernetes/azure.json", "path to config")
-	deployCmd.Flags().StringVarP(&outputPath, "output", "o", "./deploy-output", "where to place output")
+	deployCmd.Flags().StringVarP(&deploymentName, "deploymentName", "n", "", "name for the deployment")
+	deployCmd.Flags().StringVarP(&location, "location", "l", "", "location for deployed resources")
+	deployCmd.Flags().StringVarP(&tenantID, "tenantId", "t", "", "tenant id for deployment")
+	deployCmd.Flags().StringVarP(&subscriptionID, "subscriptionId", "s", "", "subscription id for deployment")
+
+	deployCmd.Flags().BoolVarP(&appConfig, "appConfig", "u", false, "file containing app config information include the name/id-url of the app, along with the private key and certificate registered with the application")
+
+	deployCmd.Flags().StringVarP(&outputPath, "outputPath", "o", "", "where to store outputs")
 
 	return deployCmd
 }
 
-func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
-	// TODO(colemickens): make Deployer created universally
-	d, err := util.NewDeployerWithToken(
-		deployConfig.SubscriptionID,
-		deployConfig.TenantID,
-		deployConfig.DeployerClientID,
-		deployConfig.DeployerClientSecret,
-	)
+func RunDeployCmd(deploymentName, location, tenantID, subscriptionID string, existingAppConfig *AppProperties) {
+	var d *util.Deployer
+
+	// Determine if we need to create an application, or if we are using an existing one
+	// Prefer to create an app per-deployment, but we need this for CI scenarios due to AD security
+
+	var appProperties AppProperties
+
+	if existingAppConfig != nil {
+		var err error
+		d, err = util.NewDeployerWithCertificate(
+			subscriptionID,
+			tenantID,
+			clientID,
+			clientCertificatePath)
+		if err != nil {
+			panic(err)
+		}
+
+		d.State.App = *existingAppConfig
+	} else {
+		// we need to do the actual oauth dance to get a token
+		// this work is on pause because I'm not sure what all it will require
+		// I think it requires pre-deploying the app ahead of time, which might be more work than its worth
+
+		// create the app and use it's credentials to initialize a Deployer
+	}
+
+	d.State.Ssh, err = d.GenerateSsh(filepath.Join(outputPath, "ssh"))
 	if err != nil {
 		panic(err)
 	}
 
-	d.Config = deployConfig
-
-	// TODO: fix config
-	d.State.VaultName = deployConfig.VaultName
-
-	d.State.Ssh, err = d.GenerateSsh()
-	if err != nil {
-		panic(err)
-	}
-
+	/*
 	sshDirectory := filepath.Join(outputPath, "ssh")
 	sshPrivateKeyPath := filepath.Join(sshDirectory, "id_rsa")
 	err = os.MkdirAll(sshDirectory, 0777)
@@ -82,6 +140,7 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 	if err != nil {
 		panic(err)
 	}
+	*/
 
 	_, err = d.EnsureResourceGroup(deployConfig.ResourceGroup, deployConfig.Location, true)
 	if err != nil {
@@ -93,13 +152,12 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 		panic(err)
 	}
 
-	// TODO: create active directory app
-	d.State.App, err = d.CreateApp(deployConfig.AppName, deployConfig.AppURL)
-	if err != nil {
-		panic(err)
+	vaultTemplateInput := util.VaultTemplateInput{
+		VaultName: vaultName,
+		TenantID: tenantID,
+		ServicePrincipalObjectID: d.State.App.ServicePrincipalObjectID,
 	}
-
-	vaultTemplate, err := d.PopulateTemplate(util.VaultTemplate)
+	vaultTemplate, err := util.PopulateTemplate(util.VaultTemplate, vaultTemplateInput)
 	if err != nil {
 		panic(err)
 	}
@@ -112,17 +170,45 @@ func RunDeployCmd(deployConfig util.DeploymentConfig, outputPath string) {
 		panic(err)
 	}
 
-	d.State.Secrets, err = d.UploadSecrets(d.Config.VaultName)
+	d.State.Secrets, err = d.UploadSecrets(vaultName)
 	if err != nil {
 		panic(err)
 	}
 
-	d.State.MyriadConfig, err = d.LoadMyriadCloudConfigs()
+	masterCloudConfig := util.PopulateTemplate(util.MasterCloudConfigTemplate, cloudConfigTemplateInput)
 	if err != nil {
 		panic(err)
 	}
 
-	myriadTemplate, err := d.PopulateTemplate(util.MyriadTemplate)
+	minionCloudConfig := util.PopulateTemplate(util.MinionCloudConfigTemplate, cloudConfigTemplateInput)
+	if err != nil {
+		panic(err)
+	}
+
+	masterCloudConfig = util.Flatten(masterCloudConfig)
+	minionCloudConfig = util.Flatten(minionCloudConfig)
+
+	myriadTemplateInput := util.MyriadTemplateInput{
+		DeploymentName: deploymentName,
+
+		MasterVmSize: "A1_Dynamic",
+		NodeVmSize: "",
+		NodeVmssInitialCount: 3,
+		Username: "azkube",
+
+		VaultName: vaultName,
+		ServicePrincipalSecretURL: d.State.Secrets.ServicePrincipalSecretURL,
+
+		PodCidr: podCidr,
+		ServiceCidr: serviceCidr,
+
+		SshPublicKeyData: d.State.Ssh.OpenSshPublicKey,
+
+		MasterCloudConfig: masterCloudConfig,
+		MinionCloudConfig: minionCloudConfig,
+	}
+
+	myriadTemplate, err := util.PopulateTemplate(util.MyriadTemplate, myriadTemplateInput)
 	if err != nil {
 		panic(err)
 	}

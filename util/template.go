@@ -75,11 +75,11 @@ func (d *Deployer) LoadMyriadCloudConfigs() (myriadConfig *MyriadConfig, err err
 	return myriadConfig, nil
 }
 
-func (d *Deployer) PopulateTemplate(t *template.Template) (template map[string]interface{}, err error) {
+func PopulateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}
 
-	err = t.Execute(&myriadBuf, d.State)
+	err = t.Execute(&myriadBuf, state)
 	if err != nil {
 		return nil, err
 	}
