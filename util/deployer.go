@@ -73,6 +73,7 @@ func newDeployer(subscriptionID, tenantID, clientID string, secret azure.Service
 	deployer = &Deployer{}
 	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
 	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
+	deployer.AdClient = autorest.Client{}
 	deployer.VaultClient = autorest.Client{}
 
 	resourcesScopeSpt, err := withSecret(tenantID, clientID, azure.AzureResourceManagerScope, secret)

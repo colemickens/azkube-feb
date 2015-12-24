@@ -15,12 +15,16 @@ const (
 	AzureVaultSecretTemplate = "https://{vault-name}.vault.azure.net/{secret-name}/{secret-version}"
 )
 
+type VaultClient struct {
+	autorest.Client
+}
+
 type Secret struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
 }
 
-func (d *Deployer) PutSecret(vaultName, secretName, secretPath string) (secretURL string, err error) {
+func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
 	pathParams := map[string]interface{}{
@@ -65,7 +69,7 @@ func (d *Deployer) PutSecret(vaultName, secretName, secretPath string) (secretUR
 	return "", nil
 }
 
-func (d *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsProperties, err error) {
+func (v *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsProperties, err error) {
 	// TODO(colemickens): populate this from the same place that is consumed from
 	secrets := map[string]string{
 		"pki/ca.crt":                               "ca-crt",
@@ -89,7 +93,7 @@ func (d *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsPr
 	}
 
 	for secretPath, secretName := range secrets {
-		_, err = d.PutSecret(vaultName, secretName, secretPath)
+		_, err = v.PutSecret(vaultName, secretName, secretPath)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +106,7 @@ func (d *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsPr
 	return secretsProperties, nil
 }
 
-func (d *Deployer) GetSecret(vaultName, secretName string) (*string, error) {
+func (v *VaultClient) GetSecret(vaultName, secretName string) (*string, error) {
 	p := map[string]interface{}{
 		"secret-name":    secretName,
 		"secret-version": "",
@@ -123,7 +127,7 @@ func (d *Deployer) GetSecret(vaultName, secretName string) (*string, error) {
 		panic(err)
 	}
 
-	resp, err := d.AdClient.Send(req, http.StatusOK)
+	resp, err := v.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}

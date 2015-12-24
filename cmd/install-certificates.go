@@ -12,36 +12,36 @@ import (
 )
 
 const (
-	certInstallLongDescription = "long desc"
+	installCertificatesLongDescription = "long desc"
 )
 
-func NewCertInstallCmd() *cobra.Command {
+func NewInstallCertificatesCmd() *cobra.Command {
 	var configPath string
 	var machineType string
 	var destination string
 
-	var certInstallCmd = &cobra.Command{
-		Use:   "certinstall",
+	var installCertificatesCmd = &cobra.Command{
+		Use:   "install-certificates",
 		Short: "install certificates on the machine",
-		Long:  certInstallLongDescription,
+		Long:  installCertificatesLongDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println("starting certinstall command")
+			log.Println("starting install-certificates command")
 
 			var deployProperties util.DeploymentProperties
-			RunCertInstallCmd(deployProperties, machineType, destination)
+			RunInstallCertificatesCmd(deployProperties, machineType, destination)
 
-			log.Println("finished certinstall command")
+			log.Println("finished install-certificates command")
 		},
 	}
 
-	certInstallCmd.Flags().StringVarP(&configPath, "config", "c", "/etc/kubernetes/azure.json", "path to config")
-	certInstallCmd.Flags().StringVarP(&machineType, "machineType", "m", "", "machine type: 'master' or 'node'")
-	certInstallCmd.Flags().StringVarP(&machineType, "destination", "d", "/etc/kubernetes/", "machine type: 'master' or 'node'")
+	installCertificatesCmd.Flags().StringVarP(&configPath, "config", "c", "/etc/kubernetes/azure.json", "path to config")
+	installCertificatesCmd.Flags().StringVarP(&machineType, "machineType", "m", "", "machine type: 'master' or 'node'")
+	installCertificatesCmd.Flags().StringVarP(&machineType, "destination", "d", "/etc/kubernetes/", "machine type: 'master' or 'node'")
 
-	return certInstallCmd
+	return installCertificatesCmd
 }
 
-func RunCertInstallCmd(deployProperties util.DeploymentProperties, machineType, destination string) {
+func RunInstallCertificatesCmd(deployProperties util.DeploymentProperties, machineType, destination string) {
 	var err error
 
 	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e")

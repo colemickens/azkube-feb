@@ -29,6 +29,10 @@ const (
 	AzureActiveDirectoryContributorRoleId = "b24988ac-6180-42a0-ab88-20f7382dd24c"
 )
 
+type AdClient struct {
+	autorest.Client
+}
+
 type AdApplication struct {
 	ApplicationID string `json:"appId,omitempty"`    // readonly
 	ObjectID      string `json:"objectId,omitempty"` // readonly
@@ -62,7 +66,7 @@ type AdRoleAssignment struct {
 	PrincipalID      string `json:"principalId,omitempty"`
 }
 
-func (d *Deployer) CreateApp(appName, appURL string) (appProperties *AppProperties, err error) {
+func (a *AdClient) CreateApp(appName, appURL string) (appProperties *AppProperties, err error) {
 	appProperties = &AppProperties{}
 
 	notBefore := time.Now()

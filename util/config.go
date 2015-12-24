@@ -4,47 +4,16 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	//"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
-	kapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
+	//kapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 )
 
-type DeploymentConfig struct {
-	Name             string
-	ResourceGroup    string
-	Location         string
-	MasterVmSize     string
-	NodeVmSize       string
-	InitialNodeCount int
-
-	MasterFqdn string
-	Username   string
-
-	VaultName string
-
+type CommonProperties struct {
+	DeploymentName string
+	Location       string
 	TenantID       string
 	SubscriptionID string
-	AppName        string
-	AppURL         string
-
-	DeployerObjectID     string
-	DeployerClientID     string
-	DeployerClientSecret string
-	ClientNames          []string
-}
-
-type PkiProperties struct {
-	CACertificate                   x509.Certificate
-	ApiServerCertificate            x509.Certificate
-	KubeletKubeconfig               kapi.Config
-	KubeproxyKubeconfig             kapi.Config
-	SchedulerKubeconfig             kapi.Config
-	ReplicationControllerKubeconfig kapi.Config
-}
-
-type SshProperties struct {
-	OpenSshPublicKey string
-	PrivateKeyPem    []byte
 }
 
 type AppProperties struct {
@@ -56,11 +25,32 @@ type AppProperties struct {
 	ServicePrincipalObjectID    string
 }
 
-type SecretsProperties struct {
+type PkiProperties struct {
+	CACertificate x509.Certificate
+
+	ApiServerCertificate             x509.Certificate
+	ApiServerPrivateKey              rsa.PrivateKey
+	KubeletCertificate               x509.Certificate
+	KubeletPrivateKey                rsa.PrivateKey
+	KubeproxyCertificate             x509.Certificate
+	KubeproxyPrivateKey              rsa.PrivateKey
+	SchedulerCertificate             x509.Certificate
+	SchedulerPrivateKey              rsa.PrivateKey
+	ReplicationControllerCertificate x509.Certificate
+	ReplicationControllerPrivateKey  rsa.PrivateKey
+}
+
+type SshProperties struct {
+	OpenSshPublicKey string
+	PrivateKeyPem    []byte
+}
+
+type VaultProperties struct {
+	Name                      string
 	ServicePrincipalSecretURL string
 }
 
-type NetworkProperties struct {
+type MyriadProperties struct {
 	VnetCidr   string
 	SubnetCidr string
 
@@ -70,38 +60,25 @@ type NetworkProperties struct {
 	MasterPrivateIp string
 	ApiServiceIp    string
 	DnsServiceIp    string
-}
 
-type KubernetesProperties struct {
 	HyperkubeContainerSpec string
 }
 
-type Deployer struct {
-	Config DeploymentConfig
-	State  DeploymentProperties
+// appears in same order as in myriad variables
+type State struct {
+	Common           *CommonProperties
+	App              *AppProperties
+	Pki              *PkiProperties
+	Ssh              *SshProperties
+	Vault            *VaultProperties
+	MyriadProperties *MyriadProperties
+}
 
+type Deployer struct {
 	DeploymentsClient resources.DeploymentsClient
 	GroupsClient      resources.GroupsClient
-	VaultClient       autorest.Client
-	AdClient          autorest.Client
-}
-
-// appears in same order as in myriad variables
-type DeploymentProperties struct {
-	Pki *PkiProperties
-	Ssh *SshProperties
-
-	App        *AppProperties
-	Secrets    *SecretsProperties
-	Network    *NetworkProperties
-	Kubernetes *KubernetesProperties
-
-	MyriadConfig *MyriadConfig
-}
-
-type MyriadConfig struct {
-	MasterCloudConfig string
-	NodeCloudConfig   string
+	VaultClient       VaultClient
+	AdClient          AdClient
 }
 
 type VaultTemplateInput struct {
