@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"io/ioutil"
 	"log"
-	"time"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -24,25 +22,23 @@ func NewDeployVaultCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting deploy-vault command")
 
-			state = ReadAndValidate(statePath,
+			var state *util.State
+			var err error
+			state, err = ReadAndValidateState(statePath,
 				[]reflect.Type{
-					reflect.TypeOf(state.CommonProperties),
-					reflect.TypeOf(state.AppProperties),
-					reflect.TypeOf(state.SshProperties),
-					reflect.TypeOf(state.PkiProperties),
-					reflect.TypeOf(state.VaultProperites),
-					reflect.TypeOf(state.SecretsProperties),
-					reflect.TypeOf(state.MyriadProperties),
+					reflect.TypeOf(state.Common),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
+					reflect.TypeOf(state.Myriad),
 				},
 				[]reflect.Type{},
 			)
 
-			state, err = RunDeployVaultCmd(state)
-			if err != nil {
-				panic(err)
-			}
+			state = RunDeployVaultCmd(state)
 
-			state = RunValidateDeploymentCmd(stateIn)
 			err = WriteState(statePath, state)
 			if err != nil {
 				panic(err)
@@ -52,11 +48,13 @@ func NewDeployVaultCmd() *cobra.Command {
 		},
 	}
 
-	destroyVaultCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	deployVaultCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return deployVaultCmd
 }
 
-func RunDeployVaultCmd(stateIn util.State) (stateOut util.State) {
-	stateOut = stateIn
+func RunDeployVaultCmd(stateIn *util.State) (stateOut *util.State) {
+	*stateOut = *stateIn
+
+	return stateOut
 }

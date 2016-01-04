@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -21,16 +22,18 @@ func NewValidateDeploymentCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting validate-deployment command")
 
+			var state *util.State
+			var err error
 			state, err = ReadAndValidateState(
 				statePath,
 				[]reflect.Type{
-					reflect.TypeOf(state.CommonProperties),
-					reflect.TypeOf(state.AppProperties),
-					reflect.TypeOf(state.SshProperties),
-					reflect.TypeOf(state.PkiProperties),
-					reflect.TypeOf(state.VaultProperites),
-					reflect.TypeOf(state.SecretsProperties),
-					reflect.TypeOf(state.MyriadProperties),
+					reflect.TypeOf(state.Common),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
+					reflect.TypeOf(state.Myriad),
 				},
 				[]reflect.Type{},
 			)
@@ -38,7 +41,8 @@ func NewValidateDeploymentCmd() *cobra.Command {
 				panic(err)
 			}
 
-			state = RunValidateDeploymentCmd(stateIn)
+			state = RunValidateDeploymentCmd(state)
+
 			err = WriteState(statePath, state)
 			if err != nil {
 				panic(err)
@@ -48,11 +52,13 @@ func NewValidateDeploymentCmd() *cobra.Command {
 		},
 	}
 
-	validateDeploymentCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	validateDeploymentCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return validateDeploymentCmd
 }
 
-func RunValidateDeploymentCmd(stateIn util.State) (stateOut util.State) {
-	stateOut = stateIn
+func RunValidateDeploymentCmd(stateIn *util.State) (stateOut *util.State) {
+	*stateOut = *stateIn
+
+	return stateOut
 }

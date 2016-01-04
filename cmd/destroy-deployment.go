@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -21,25 +22,28 @@ func NewDestroyDeploymentCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting destroy-deployment command")
 
+			var state *util.State
+			var err error
 			state, err = ReadAndValidateState(
 				statePath,
 				[]reflect.Type{
-					reflect.TypeOf(state.CommonProperties),
-					reflect.TypeOf(state.AppProperties),
-					reflect.TypeOf(state.SshProperties),
-					reflect.TypeOf(state.PkiProperties),
-					reflect.TypeOf(state.VaultProperites),
-					reflect.TypeOf(state.SecretsProperties),
+					reflect.TypeOf(state.Common),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
 				},
 				[]reflect.Type{
-					reflect.TypeOf(state.MyriadProperties),
+					reflect.TypeOf(state.Myriad),
 				},
 			)
 			if err != nil {
 				panic(err)
 			}
 
-			state = RunScaleDeploymentCmd(stateIn)
+			state = RunDestroyDeploymentCmd(state)
+
 			err = WriteState(statePath, state)
 			if err != nil {
 				panic(err)
@@ -49,11 +53,13 @@ func NewDestroyDeploymentCmd() *cobra.Command {
 		},
 	}
 
-	uploadSecretsCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	destroyDeploymentCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return destroyDeploymentCmd
 }
 
-func RunScaleDeploymentCmd(stateIn util.State) (stateOut util.State) {
+func RunDestroyDeploymentCmd(stateIn *util.State) (stateOut *util.State) {
+	*stateOut = *stateIn
 
+	return stateOut
 }

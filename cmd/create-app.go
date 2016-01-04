@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	//"encoding/hex"
-	//"io/ioutil"
-	//"log"
-	"time"
+	"log"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -26,19 +24,24 @@ func NewCreateAppCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting create-config command")
 
-			state = ReadAndValidate(statePath,
+			var state *util.State
+			var err error
+			state, err = ReadAndValidateState(statePath,
 				[]reflect.Type{
-					reflect.TypeOf(state.CommonProperties),
+					reflect.TypeOf(state.Common),
 				},
 				[]reflect.Type{
-					reflect.TypeOf(state.AppProperties),
-					reflect.TypeOf(state.SshProperties),
-					reflect.TypeOf(state.PkiProperties),
-					reflect.TypeOf(state.VaultProperites),
-					reflect.TypeOf(state.SecretsProperties),
-					reflect.TypeOf(state.MyriadProperties),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
+					reflect.TypeOf(state.Myriad),
 				},
 			)
+			if err != nil {
+				panic(err)
+			}
 
 			if appName == "" {
 				appName = state.Common.DeploymentName
@@ -62,18 +65,21 @@ func NewCreateAppCmd() *cobra.Command {
 		},
 	}
 
-	createAppCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
-	createAppCmd.Flags().StringVar(&appName, "name", "n", "", "name of the app")
-	createAppCmd.Flags().StringVar(&appIdentifierURL, "identifier-url", "i", "", "identifier-url for the app")
+	createAppCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	createAppCmd.Flags().StringVarP(&appName, "name", "n", "", "name of the app")
+	createAppCmd.Flags().StringVarP(&appIdentifierURL, "identifier-url", "i", "", "identifier-url for the app")
 
 	return createAppCmd
 }
 
-func RunCreateAppCmd(stateIn util.State, appName, appURL string) (stateOut util.State, err error) {
-	stateOut.App = util.AppProperties{
+func RunCreateAppCmd(stateIn *util.State, appName, appURL string) (stateOut *util.State, err error) {
+	*stateOut = *stateIn // copy inputs
+
+	stateOut.App = &util.AppProperties{
 	// make copy of inputs or something for now?
 	// hard code these?
 	// make it load from a file and pretend it actually went out and made it ?
 	}
+
 	panic("you must do this yourself for now")
 }

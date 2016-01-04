@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -21,20 +22,25 @@ func NewCreateSshCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting create-ssh command")
 
-			if _, err := os.Stat(statePath); err == nil {
-				state, err = ReadState(statePath)
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				log.Println("no state file, creating empty one")
+			var state *util.State
+			var err error
+			state, err = ReadAndValidateState(statePath,
+				[]reflect.Type{
+					reflect.TypeOf(state.Common),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
+					reflect.TypeOf(state.Myriad),
+				},
+				[]reflect.Type{},
+			)
+			if err != nil {
+				panic(err)
 			}
 
-			// validate state
-			// validate deploymentName
-			// validate common state object
-
-			state = RunCreateCommonCmd(deployProperties, state)
+			state = RunCreateSshCmd(state)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -45,11 +51,13 @@ func NewCreateSshCmd() *cobra.Command {
 		},
 	}
 
-	scaleDeploymentCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	createSshCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return createSshCmd
 }
 
-func RunCreateSshCmd(stateIn util.State, deploymentName string) (stateOut util.State) {
-	stateOut = stateIn
+func RunCreateSshCmd(stateIn *util.State) (stateOut *util.State) {
+	*stateOut = *stateIn
+
+	return stateOut
 }

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"reflect"
 
 	"github.com/colemickens/azkube/util"
@@ -30,8 +33,8 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.AddCommand(NewDeployMyriadCmd())
 
 	// on deployer's box (after cluster is up)
-	rootCmd.AddCommand(NewScaleCmd())
-	rootCmd.AddCommand(NewDestroyCmd())
+	rootCmd.AddCommand(NewScaleDeploymentCmd())
+	rootCmd.AddCommand(NewDestroyDeploymentCmd())
 
 	// on cluster's box
 	rootCmd.AddCommand(NewInstallCertificatesCmd())
@@ -39,7 +42,7 @@ func NewRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stateOut util.State, err error) {
+func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stateOut *util.State, err error) {
 	var state util.State
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -51,8 +54,8 @@ func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stat
 	}
 
 	stateValue := reflect.ValueOf(state)
-	for i = 0; i < stateValue.NumField(); i++ {
-		field := stateValue.FieldByIndex(i)
+	for i := 0; i < stateValue.NumField(); i++ {
+		field := stateValue.FieldByIndex([]int{i})
 
 		if field.Kind() != reflect.Ptr {
 			continue
@@ -61,22 +64,22 @@ func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stat
 		if !field.Elem().IsValid() {
 			for _, expect := range expected {
 				if field.Type() == expect {
-					return fmt.Errorf("field %s was nil and should not be", field.Name)
+					return nil, fmt.Errorf("field %s was nil and should not be", field.Type().Name())
 				}
 			}
 		} else {
 			for _, forbid := range forbidden {
 				if field.Type() == forbid {
-					return fmt.Errorf("field %s was filled but should not be", field.Name)
+					return nil, fmt.Errorf("field %s was filled but should not be", field.Type().Name())
 				}
 			}
 		}
 	}
-	return state, nil
+	return &state, nil
 }
 
-func WriteState(path string, state util.State) (err error) {
-	stateJson, err = json.Marshal(state)
+func WriteState(path string, state *util.State) (err error) {
+	stateJson, err := json.Marshal(state)
 	if err != nil {
 		return err
 	}

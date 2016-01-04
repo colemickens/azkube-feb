@@ -1,5 +1,3 @@
-// +build ignore
-
 package util
 
 import (
@@ -75,8 +73,8 @@ func newDeployer(subscriptionID, tenantID, clientID string, secret azure.Service
 	deployer = &Deployer{}
 	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
 	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
-	deployer.AdClient = autorest.Client{}
-	deployer.VaultClient = autorest.Client{}
+	// deployer.AdClient = AdClient{ autorest.Client{} }
+	deployer.VaultClient = VaultClient{autorest.Client{}}
 
 	resourcesScopeSpt, err := withSecret(tenantID, clientID, azure.AzureResourceManagerScope, secret)
 	if err != nil {
@@ -86,15 +84,15 @@ func newDeployer(subscriptionID, tenantID, clientID string, secret azure.Service
 	if err != nil {
 		return nil, err
 	}
-	adScopeSpt, err := withSecret(tenantID, clientID, AzureActiveDirectoryScope, secret)
-	if err != nil {
-		return nil, err
-	}
+	//adScopeSpt, err := withSecret(tenantID, clientID, AzureActiveDirectoryScope, secret)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
 	deployer.GroupsClient.Authorizer = resourcesScopeSpt
 	deployer.VaultClient.Authorizer = vaultScopeSpt
-	deployer.AdClient.Authorizer = adScopeSpt
+	//deployer.AdClient.Authorizer = adScopeSpt
 
 	return deployer, nil
 }

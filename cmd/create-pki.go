@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"reflect"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -21,12 +22,17 @@ func NewCreatePkiCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting create-pki command")
 
-			state, err = ReadState(statePath)
+			var state *util.State
+			var err error
+			state, err = ReadAndValidateState(statePath,
+				[]reflect.Type{},
+				[]reflect.Type{},
+			)
 			if err != nil {
 				panic(err)
 			}
 
-			state = RunCreatePkiCmd(deployProperties, state)
+			state = RunCreatePkiCmd(state)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -37,11 +43,12 @@ func NewCreatePkiCmd() *cobra.Command {
 		},
 	}
 
-	createPkiCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	createPkiCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return createPkiCmd
 }
 
-func RunCreatePkiCmd(stateIn util.State, deploymentName string) (stateOut util.State) {
-	stateOut = stateIn
+func RunCreatePkiCmd(stateIn *util.State) (stateOut *util.State) {
+	*stateOut = *stateIn
+	return stateOut
 }

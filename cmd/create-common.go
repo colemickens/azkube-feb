@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"log"
+	"os"
+	"reflect"
 	"time"
 
 	"github.com/colemickens/azkube/util"
@@ -15,6 +18,7 @@ const (
 func NewCreateCommonCmd() *cobra.Command {
 	var statePath string
 	var deploymentName string
+	var location string
 	var resourceGroup string
 	var subscriptionID string
 	var tenantID string
@@ -31,28 +35,38 @@ func NewCreateCommonCmd() *cobra.Command {
 				log.Println("no state file, creating empty one")
 			}
 
+			var state *util.State
+			var err error
 			state, err = ReadAndValidateState(
 				statePath,
 				[]reflect.Type{},
 				[]reflect.Type{
-					reflect.TypeOf(state.CommonProperties),
-					reflect.TypeOf(state.AppProperties),
-					reflect.TypeOf(state.SshProperties),
-					reflect.TypeOf(state.PkiProperties),
-					reflect.TypeOf(state.VaultProperites),
-					reflect.TypeOf(state.SecretsProperties),
-					reflect.TypeOf(state.MyriadProperties),
+					reflect.TypeOf(state.Common),
+					reflect.TypeOf(state.App),
+					reflect.TypeOf(state.Ssh),
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Vault),
+					reflect.TypeOf(state.Secrets),
+					reflect.TypeOf(state.Myriad),
 				},
 			)
 			if err != nil {
 				panic(err)
 			}
 
+			if deploymentName == "" {
+				now := time.Now().Format("200601012150405")
+				nowHex := hex.EncodeToString([]byte(now))
+				log.Println("deploymentNameDefault time:", now)
+				log.Println("deploymentNameDefault  hex:", nowHex)
+				deploymentName = "kube-" + nowHex
+			}
+
 			if resourceGroup == "" {
 				resourceGroup = deploymentName
 			}
 
-			state = RunCreateCommonCmd(deploymentName, location, subscriptionID, tenantID, resourceGroup)
+			state = RunCreateCommonCmd(state, deploymentName, location, subscriptionID, tenantID, resourceGroup)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -63,25 +77,28 @@ func NewCreateCommonCmd() *cobra.Command {
 		},
 	}
 
-	hex := time.Now().Format("200601012150405")
-	deploymentNameDefault := hex.EncodeToString([]byte(time))
-	log.Println("deploymentNameDefault time:", now)
-	log.Println("deploymentNameDefault  hex:", hex)
-	deploymentNameDefault = "kube-" + hex
+	// TODO(colemickens) stringvarp -> stringvar
 
-	createCommonCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
-	createCommonCmd.Flags().StringVar(&deploymentName, "deployment-name", "d", deploymentNameDefault, "name of the deployment")
-	createCommonCmd.Flags().StringVar(&resourceGroup, "resource-group", "r", "the resource group name to use (deployment name is used if empty)")
-	createCommonCmd.Flags().StringVar(&location, "location", "l", "westus", "location for the deployment")
-	createCommonCmd.Flags().StringVar(&subscriptionID, "subscription-id", "s", "", "subscription id to deploy into")
-	createCommonCmd.Flags().StringVar(&tenantID, "tenant-id", "t", "")
+	createCommonCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	createCommonCmd.Flags().StringVarP(&deploymentName, "deployment-name", "d", "", "name of the deployment (one will be auto-generated if empty)")
+	createCommonCmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", "", "the resource group name to use (deployment name is used if empty)")
+	createCommonCmd.Flags().StringVarP(&location, "location", "l", "westus", "location for the deployment")
+	createCommonCmd.Flags().StringVarP(&subscriptionID, "subscription-id", "s", "", "subscription id to deploy into")
+	createCommonCmd.Flags().StringVarP(&tenantID, "tenant-id", "t", "", "tenant id of account")
 
 	return createCommonCmd
 }
 
-func RunCreateCommonCmd(stateIn util.State, deploymentName string) (stateOut util.State) {
-	stateOut = stateIn.Common{
+func RunCreateCommonCmd(stateIn *util.State, deploymentName, location, subscriptionID, tenantID, resourceGroup string) (stateOut *util.State) {
+	*stateOut = *stateIn
+
+	stateOut.Common = &util.CommonProperties{
 		DeploymentName: deploymentName,
 		Location:       location,
+		SubscriptionID: subscriptionID,
+		TenantID:       tenantID,
+		ResourceGroup:  resourceGroup,
 	}
+
+	return stateOut
 }

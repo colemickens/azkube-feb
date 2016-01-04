@@ -69,19 +69,20 @@ type MyriadProperties struct {
 
 // appears in same order as in myriad variables
 type State struct {
-	Common           *CommonProperties
-	App              *AppProperties
-	Pki              *PkiProperties
-	Ssh              *SshProperties
-	Vault            *VaultProperties
-	MyriadProperties *MyriadProperties
+	Common  *CommonProperties
+	App     *AppProperties
+	Pki     *PkiProperties
+	Ssh     *SshProperties
+	Vault   *VaultProperties
+	Secrets *SecretsProperties
+	Myriad  *MyriadProperties
 }
 
 type Deployer struct {
 	DeploymentsClient resources.DeploymentsClient
 	GroupsClient      resources.GroupsClient
 	VaultClient       VaultClient
-	//	AdClient          AdClient
+	//AdClient          AdClient
 }
 
 type VaultTemplateInput struct {
