@@ -49,6 +49,7 @@ func formatCloudConfig(filepath string) (string, error) {
 	return string(data), nil
 }
 
+/*
 func (d *Deployer) LoadMyriadCloudConfigs() (myriadConfig *MyriadConfig, err error) {
 	var masterBuf bytes.Buffer
 	err = MasterCloudConfigTemplate.Execute(&masterBuf, d.State)
@@ -74,6 +75,7 @@ func (d *Deployer) LoadMyriadCloudConfigs() (myriadConfig *MyriadConfig, err err
 
 	return myriadConfig, nil
 }
+*/
 
 func PopulateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer

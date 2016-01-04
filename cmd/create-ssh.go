@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"io/ioutil"
 	"log"
-	"time"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -16,7 +13,6 @@ const (
 
 func NewCreateSshCmd() *cobra.Command {
 	var statePath string
-	var deploymentName string
 
 	var createSshCmd = &cobra.Command{
 		Use:   "create-ssh",
@@ -48,6 +44,8 @@ func NewCreateSshCmd() *cobra.Command {
 			log.Println("finished create-ssh command")
 		},
 	}
+
+	scaleDeploymentCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return createSshCmd
 }

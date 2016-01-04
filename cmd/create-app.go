@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"io/ioutil"
-	"log"
+	//"encoding/hex"
+	//"io/ioutil"
+	//"log"
 	"time"
 
 	"github.com/colemickens/azkube/util"
@@ -27,8 +27,17 @@ func NewCreateAppCmd() *cobra.Command {
 			log.Println("starting create-config command")
 
 			state = ReadAndValidate(statePath,
-				[]reflect.Type{},
-				[]reflect.Type{},
+				[]reflect.Type{
+					reflect.TypeOf(state.CommonProperties),
+				},
+				[]reflect.Type{
+					reflect.TypeOf(state.AppProperties),
+					reflect.TypeOf(state.SshProperties),
+					reflect.TypeOf(state.PkiProperties),
+					reflect.TypeOf(state.VaultProperites),
+					reflect.TypeOf(state.SecretsProperties),
+					reflect.TypeOf(state.MyriadProperties),
+				},
 			)
 
 			if appName == "" {
@@ -39,7 +48,7 @@ func NewCreateAppCmd() *cobra.Command {
 				appIdentifierURL = "http://" + state.Common.DeploymentName + "/"
 			}
 
-			state, err = RunCreateAppCmd(deployProperties, state)
+			state, err = RunCreateAppCmd(state, appName, appIdentifierURL)
 			if err != nil {
 				panic(err)
 			}
@@ -60,8 +69,11 @@ func NewCreateAppCmd() *cobra.Command {
 	return createAppCmd
 }
 
-func RunCreateAppCmd(stateIn util.State, deploymentName string) (stateOut util.State, err error) {
-	// eventually it will do this stuff for you...
-	stateOut.App = util.AppProperties{}
+func RunCreateAppCmd(stateIn util.State, appName, appURL string) (stateOut util.State, err error) {
+	stateOut.App = util.AppProperties{
+	// make copy of inputs or something for now?
+	// hard code these?
+	// make it load from a file and pretend it actually went out and made it ?
+	}
 	panic("you must do this yourself for now")
 }

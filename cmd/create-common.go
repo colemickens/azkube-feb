@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -17,6 +15,9 @@ const (
 func NewCreateCommonCmd() *cobra.Command {
 	var statePath string
 	var deploymentName string
+	var resourceGroup string
+	var subscriptionID string
+	var tenantID string
 
 	var createCommonCmd = &cobra.Command{
 		Use:   "create-config",
@@ -47,11 +48,11 @@ func NewCreateCommonCmd() *cobra.Command {
 				panic(err)
 			}
 
-			// validate state
-			// validate deploymentName
-			// validate cmmon state object
+			if resourceGroup == "" {
+				resourceGroup = deploymentName
+			}
 
-			state = RunCreateCommonCmd(deployProperties, state)
+			state = RunCreateCommonCmd(deploymentName, location, subscriptionID, tenantID, resourceGroup)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -70,9 +71,10 @@ func NewCreateCommonCmd() *cobra.Command {
 
 	createCommonCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 	createCommonCmd.Flags().StringVar(&deploymentName, "deployment-name", "d", deploymentNameDefault, "name of the deployment")
+	createCommonCmd.Flags().StringVar(&resourceGroup, "resource-group", "r", "the resource group name to use (deployment name is used if empty)")
 	createCommonCmd.Flags().StringVar(&location, "location", "l", "westus", "location for the deployment")
 	createCommonCmd.Flags().StringVar(&subscriptionID, "subscription-id", "s", "", "subscription id to deploy into")
-	createCommonCmd.Flags().StringVar(&subscriptionID, "tenant-id", "t", "")
+	createCommonCmd.Flags().StringVar(&tenantID, "tenant-id", "t", "")
 
 	return createCommonCmd
 }

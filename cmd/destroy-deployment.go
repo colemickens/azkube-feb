@@ -8,18 +8,18 @@ import (
 )
 
 const (
-	scaleDeploymentLongDescription = "long desc"
+	destroyDeploymentLongDescription = "long desc"
 )
 
-func NewScaleDeploymentCmd() *cobra.Command {
+func NewDestroyDeploymentCmd() *cobra.Command {
 	var statePath string
 
-	var scaleDeploymentCmd = &cobra.Command{
-		Use:   "scale-deployment",
-		Short: "scale a kubernetes deployment",
-		Long:  scaleLongDescription,
+	var destroyDeploymentCmd = &cobra.Command{
+		Use:   "destroy-deployment",
+		Short: "destroy a kubernetes deployment",
+		Long:  destroyDeploymentLongDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println("starting scale-deployment command")
+			log.Println("starting destroy-deployment command")
 
 			state, err = ReadAndValidateState(
 				statePath,
@@ -45,13 +45,13 @@ func NewScaleDeploymentCmd() *cobra.Command {
 				panic(err)
 			}
 
-			log.Println("finished scale-deployment command")
+			log.Println("finished destroy-deployment command")
 		},
 	}
 
-	scaleDeploymentCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	uploadSecretsCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
-	return scaleDeploymentCmd
+	return destroyDeploymentCmd
 }
 
 func RunScaleDeploymentCmd(stateIn util.State) (stateOut util.State) {

@@ -48,14 +48,14 @@ func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secre
 		return "", err
 	}
 
-	resp, err := d.AdClient.Send(req, http.StatusOK)
+	resp, err := v.Send(req, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
 
 	err = autorest.Respond(
 		resp,
-		d.AdClient.ByInspecting(),
+		v.ByInspecting(),
 		autorest.WithErrorUnlessOK(),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -69,7 +69,7 @@ func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secre
 	return "", nil
 }
 
-func (v *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsProperties, err error) {
+func (v *VaultClient) UploadSecrets(vaultProperties VaultProperties) (secretsProperties *SecretsProperties, err error) {
 	// TODO(colemickens): populate this from the same place that is consumed from
 	secrets := map[string]string{
 		"pki/ca.crt":                               "ca-crt",
@@ -83,8 +83,8 @@ func (v *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsPr
 		"pki/master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
 	}
 
-	servicePrincipalSecretURL, err := d.PutSecret(
-		vaultName,
+	servicePrincipalSecretURL, err := v.PutSecret(
+		vaultProperties.Name,
 		"servicePrincipal-pfx",
 		"pki/servicePrincipal.pfx",
 	)
@@ -93,7 +93,7 @@ func (v *Deployer) UploadSecrets(vaultName string) (secretsProperties *SecretsPr
 	}
 
 	for secretPath, secretName := range secrets {
-		_, err = v.PutSecret(vaultName, secretName, secretPath)
+		_, err = v.PutSecret(vaultProperties.Name, secretName, secretPath)
 		if err != nil {
 			return nil, err
 		}

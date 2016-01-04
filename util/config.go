@@ -6,7 +6,6 @@ import (
 
 	//"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
-	//kapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 )
 
 type CommonProperties struct {
@@ -14,10 +13,11 @@ type CommonProperties struct {
 	Location       string
 	TenantID       string
 	SubscriptionID string
+	ResourceGroup  string
 }
 
 type AppProperties struct {
-	ID                          string
+	ApplicationID               string
 	Name                        string
 	IdentifierURL               string
 	ServicePrincipalCertificate x509.Certificate
@@ -46,7 +46,10 @@ type SshProperties struct {
 }
 
 type VaultProperties struct {
-	Name                      string
+	Name string
+}
+
+type SecretsProperties struct {
 	ServicePrincipalSecretURL string
 }
 
@@ -78,7 +81,7 @@ type Deployer struct {
 	DeploymentsClient resources.DeploymentsClient
 	GroupsClient      resources.GroupsClient
 	VaultClient       VaultClient
-	AdClient          AdClient
+	//	AdClient          AdClient
 }
 
 type VaultTemplateInput struct {

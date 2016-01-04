@@ -8,7 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
-func (d *Deployer) DoDeployment(name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
+func (d *Deployer) DoDeployment(commonProperties CommonProperties, name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
 	deployment := resources.Deployment{
 		Properties: &resources.DeploymentProperties{
 			Template: &template,
@@ -17,8 +17,8 @@ func (d *Deployer) DoDeployment(name string, template map[string]interface{}, wa
 	}
 
 	deploymentResponse, err := d.DeploymentsClient.CreateOrUpdate(
-		d.Config.ResourceGroup,
-		d.Config.ResourceGroup+"-"+name+"-deploy",
+		commonProperties.ResourceGroup,
+		commonProperties.ResourceGroup+"-"+name+"-deploy",
 		deployment)
 	if err != nil {
 		panic(err)

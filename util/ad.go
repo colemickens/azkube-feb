@@ -1,3 +1,7 @@
+// +build ignore
+
+// blocked on AD anyway, need to make progress elsewhere
+
 package util
 
 import (
@@ -7,7 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
+	// "io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -66,7 +70,7 @@ type AdRoleAssignment struct {
 	PrincipalID      string `json:"principalId,omitempty"`
 }
 
-func (a *AdClient) CreateApp(appName, appURL string) (appProperties *AppProperties, err error) {
+func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL string) (appProperties *AppProperties, err error) {
 	appProperties = &AppProperties{}
 
 	notBefore := time.Now()
@@ -78,14 +82,12 @@ func (a *AdClient) CreateApp(appName, appURL string) (appProperties *AppProperti
 	if err != nil {
 		return nil, err
 	}
-
 	privateKeyPemBlock := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 	privateKeyPemBytes := pem.EncodeToMemory(privateKeyPemBlock)
-
-	appProperties.ServicePrincipalPrivateKeyPem = string(privateKeyPemBytes)
+	appProperties.ServicePrincipalPrivateKey = *privateKey
 
 	// create the cert and store it in state
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -109,27 +111,24 @@ func (a *AdClient) CreateApp(appName, appURL string) (appProperties *AppProperti
 	if err != nil {
 		return nil, err
 	}
-
+	certificate, err := x509.ParseCertificate(certificateDer)
+	if err != nil {
+		return nil, err
+	}
+	appProperties.ServicePrincipalCertificate = *certificate
 	certificatePemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificateDer})
-	ioutil.WriteFile("last-cert.cer", certificatePemBytes, 0777) // TODO(colemickens): remove
-
 	certificatePem := string(certificatePemBytes)
-	log.Println(certificatePem)
 	parts := strings.Split(certificatePem, "\n")
 	certificatePem = strings.Join(parts[1:len(parts)-2], "")   // 500
 	certificatePem = strings.Join(parts[1:len(parts)-2], "\n") // 500
-	//certificatePemBytes, _ = json.Marshal(certificatePem)
-	//certificatePem = string(certificatePemBytes)
-	_ = json.Marshal
-
-	appProperties.ServicePrincipalCertificatePem = certificatePem
+	certificatePemBytes, _ = json.Marshal(certificatePem)
 
 	// create application
 	applicationReq := AdApplication{
 		AvailableToOtherTenants: false,
-		DisplayName:             d.Config.AppName,
-		Homepage:                d.Config.AppURL,
-		IdentifierURLs:          []string{d.Config.AppURL},
+		DisplayName:             appName,
+		Homepage:                appURL,
+		IdentifierURLs:          []string{appURL},
 		KeyCredentials: []AdKeyCredential{
 			AdKeyCredential{
 				KeyId:     uuid.New(),
@@ -137,12 +136,12 @@ func (a *AdClient) CreateApp(appName, appURL string) (appProperties *AppProperti
 				Usage:     "Verify",
 				StartDate: notBefore.Format(time.RFC3339),
 				EndDate:   notAfter.Format(time.RFC3339),
-				Value:     appProperties.ServicePrincipalCertificatePem,
+				Value:     string(certificatePemBytes),
 			},
 		},
 	}
 
-	p := map[string]interface{}{"tenant-id": d.Config.TenantID}
+	p := map[string]interface{}{"tenant-id": commonConfig.TenantID}
 	q := map[string]interface{}{"api-version": AzureActiveDirectoryApiVersion}
 
 	forceItIn := `{"availableToOtherTenants":false,"displayName":"test01113","homepage":"http://test000113","identifierUris":["http://test000113"],"keyCredentials":[{"startDate":"2015-12-18T08:25:21.694Z","endDate":"2043-05-05T08:02:54.000Z","value":"MIIDBDCCAeygAwIBAgIRAMVbOzlLG6kqcxqSBJNcHlowDQYJKoZIhvcNAQELBQAw\nIjEPMA0GA1UEChMGQXprdWJlMQ8wDQYDVQQDEwZBemt1YmUwHhcNMTUxMjE4MDgx\nODMxWhcNNDMwNTA1MDgxODMxWjAiMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMT\nBkF6a3ViZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKvd96W+mUO8\nNKbexxKLmrkOLVixzroDiDew3uIT94miwvDcnNCx79XXPOl57cyPwj8Hs5z47gqY\nuwlUayVSCLl81ixog3k0mwAh03O1W3pwdafpCC6qOOPKY4daEjS4raGj8pPvpEto\n2Tv5jGTpuKAeqmw/G0t3cGSs9ruOBO0WEtzd6of0zXTLEtt6SnKbeLrrU25g6qBg\nSPSPPtT88zNjhwA0q1FwSOEpbTjnWw1Ujw6RAk4xF+2wImeYAkwcix50zWAErLkb\ndrWszoEaX1H4mlhb80TOnnksfoQctDVfnS8IUxDIri9Dy15APKyoRG45l+ni6dS+\nDmc4Uv/VP9UCAwEAAaM1MDMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsG\nAQUFBwMBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggEBAIiuwS/ZkUiQ\ncgakyVLnzb/egvhlSB+ol72IyKiKa4PzgsX+JxhHC5+5p2g8IY5o3mfK2GxkiA23\nOdwxJDGepJuQrU3Aue2DC8U7PdCH/PweF+TWXU2DeyYp/8fhzD12gIS8TmJfgozM\nYiMaf9dyKFU/GrbosfjNS6GUrhbeZYKF3EfqwEe8Igv4JqQvQWpxxv8ckyisdBlq\nTw/GY8XWAfOnhYwVU0q1zS3aQpKahwIZBGqDNulXBHgRs2261UykSIUXyVc5Uawv\nx7uVdZgLjCfhR1XuBiBuTwyWb5xkbkP/lJLrl06UmJbuwcj1+pyXfnevCDbfnPNO\nGFtPzdmktNw=","keyId":"9dfcaeb7-3367-4387-ab92-52da1a789560","usage":"Verify","type":"AsymmetricX509Cert"}]}`

@@ -54,3 +54,9 @@ Wait for the deployment to finish!
 - Terraform?
 - Confd for upgrading cluster?
 
+## Issues brought up:
+
+1. MASTER_IP could be fragile? (I'm not sure it is in Azure...)
+
+2. Porting to ubuntu could be difficult because of docker-bootstrap instance
+

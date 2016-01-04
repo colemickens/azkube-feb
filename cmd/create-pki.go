@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"io/ioutil"
 	"log"
-	"time"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -16,7 +13,6 @@ const (
 
 func NewCreatePkiCmd() *cobra.Command {
 	var statePath string
-	var deploymentName string
 
 	var createPkiCmd = &cobra.Command{
 		Use:   "create-pki",
@@ -40,6 +36,8 @@ func NewCreatePkiCmd() *cobra.Command {
 			log.Println("finished create-pki command")
 		},
 	}
+
+	createPkiCmd.Flags().StringVar(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
 
 	return createPkiCmd
 }

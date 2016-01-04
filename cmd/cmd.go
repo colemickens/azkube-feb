@@ -3,6 +3,7 @@ package cmd
 import (
 	"reflect"
 
+	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
 )
 
@@ -21,9 +22,9 @@ func NewRootCmd() *cobra.Command {
 
 	// on deployer's box
 	rootCmd.AddCommand(NewCreateCommonCmd())
-	rootCmd.AddCommand(NewCreatePkiCmd())
-	rootCmd.AddCommand(NewCreateSshCmd())
 	rootCmd.AddCommand(NewCreateAppCmd())
+	rootCmd.AddCommand(NewCreateSshCmd())
+	rootCmd.AddCommand(NewCreatePkiCmd())
 	rootCmd.AddCommand(NewDeployVaultCmd())
 	rootCmd.AddCommand(NewUploadSecretsCmd())
 	rootCmd.AddCommand(NewDeployMyriadCmd())
@@ -38,7 +39,7 @@ func NewRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (state util.State, err error) {
+func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stateOut util.State, err error) {
 	var state util.State
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
