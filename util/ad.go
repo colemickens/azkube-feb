@@ -69,7 +69,7 @@ type AdRoleAssignment struct {
 }
 
 func (app *AppProperties) ServicePrincipalPkcs12() ([]byte, error) {
-	pfxData, err = pkcs12.Encode(app.ServicePrincipalPrivateKey, app.ServicePrincipalCertificate, nil, "")
+	pfxData, err := pkcs12.Encode(app.ServicePrincipalPrivateKey, &app.ServicePrincipalCertificate, nil, "")
 	if err != nil {
 		return nil, err
 	}

@@ -82,7 +82,7 @@ func RunDeployMyriadCmd(state *util.State, hyperkubeSpec, serviceCidr, podCidr, 
 
 	cloudConfigTemplateInput := &util.CloudConfigTemplateInput{
 		DeploymentName:         state.Common.DeploymentName,
-		ConfigFile:             configFileRendered,
+		RuntimeConfigFile:      configFileRendered,
 		HyperkubeContainerSpec: hyperkubeSpec,
 		ServiceCidr:            serviceCidr,
 		PodCidr:                podCidr,
