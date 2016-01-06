@@ -22,7 +22,7 @@
 		"vnetName": "vnet",
 		"vnetCidr": "10.0.0.0/8",
 		"etcdSubnetName": "etcdSubnet",
-		"etcdSubnetCidr": "10.0.0.0.0/16",
+		"etcdSubnetCidr": "10.0.0.0/16",
 		"masterSubnetName": "masterSubnet",
 		"masterSubnetCidr": "10.0.0.0/16",
 		"nodeSubnetName": "nodeSubnet",

@@ -3,17 +3,19 @@ package util
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"net"
 
-	//"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
 )
 
 type CommonProperties struct {
 	DeploymentName string
+	ResourceGroup  string
 	Location       string
 	TenantID       string
 	SubscriptionID string
-	ResourceGroup  string
+	MasterFQDN     string
+	MasterIP       net.IP // TODO(colemickens): populate this
 }
 
 type AppProperties struct {
@@ -21,28 +23,26 @@ type AppProperties struct {
 	Name                        string
 	IdentifierURL               string
 	ServicePrincipalCertificate x509.Certificate
-	ServicePrincipalPrivateKey  rsa.PrivateKey
+	ServicePrincipalPrivateKey  *rsa.PrivateKey
 	ServicePrincipalObjectID    string
 }
 
-type PkiProperties struct {
-	CACertificate x509.Certificate
+type PkiKeyCertPair struct {
+	Certificate *x509.Certificate
+	PrivateKey  *rsa.PrivateKey
+}
 
-	ApiServerCertificate             x509.Certificate
-	ApiServerPrivateKey              rsa.PrivateKey
-	KubeletCertificate               x509.Certificate
-	KubeletPrivateKey                rsa.PrivateKey
-	KubeproxyCertificate             x509.Certificate
-	KubeproxyPrivateKey              rsa.PrivateKey
-	SchedulerCertificate             x509.Certificate
-	SchedulerPrivateKey              rsa.PrivateKey
-	ReplicationControllerCertificate x509.Certificate
-	ReplicationControllerPrivateKey  rsa.PrivateKey
+type PkiProperties struct {
+	CA                    *PkiKeyCertPair
+	ApiServer             *PkiKeyCertPair
+	Kubelet               *PkiKeyCertPair
+	Kubeproxy             *PkiKeyCertPair
+	Scheduler             *PkiKeyCertPair
+	ReplicationController *PkiKeyCertPair
 }
 
 type SshProperties struct {
-	OpenSshPublicKey string
-	PrivateKeyPem    []byte
+	PrivateKey *rsa.PrivateKey
 }
 
 type VaultProperties struct {
@@ -54,9 +54,6 @@ type SecretsProperties struct {
 }
 
 type MyriadProperties struct {
-	VnetCidr   string
-	SubnetCidr string
-
 	PodCidr     string
 	ServiceCidr string
 
@@ -67,7 +64,7 @@ type MyriadProperties struct {
 	HyperkubeContainerSpec string
 }
 
-// appears in same order as in myriad variables
+// appears in same order as in variable in ARM template
 type State struct {
 	Common  *CommonProperties
 	App     *AppProperties
@@ -88,7 +85,7 @@ type Deployer struct {
 type VaultTemplateInput struct {
 	VaultName                string
 	TenantID                 string
-	ServicePrincipalObjectId string
+	ServicePrincipalObjectID string
 }
 
 type CloudConfigTemplateInput struct {
@@ -123,5 +120,5 @@ type MyriadTemplateInput struct {
 	SshPublicKeyData string
 
 	MasterCloudConfig string
-	MinionCloudConfig string
+	NodeCloudConfig   string
 }

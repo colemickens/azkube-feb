@@ -33,49 +33,19 @@ func init() {
 	ScaleTemplate = x("templates/scale/scale.in.json", "scaleTemplate")
 }
 
-func formatCloudConfig(filepath string) (string, error) {
-	cloudConfigBytes, err := ioutil.ReadFile(filepath)
+func PopulateAndFlattenTemplate(t *template.Template, state interface{}) (string, error) {
+	filled, err := PopulateTemplate(t, state)
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 
-	cloudConfig := string(cloudConfigBytes)
-
-	data, err := json.Marshal(&cloudConfig)
+	data, err := json.Marshal(&filled)
 	if err != nil {
-		panic(err)
+		return "", nil
 	}
 
 	return string(data), nil
 }
-
-/*
-func (d *Deployer) LoadMyriadCloudConfigs() (myriadConfig *MyriadConfig, err error) {
-	var masterBuf bytes.Buffer
-	err = MasterCloudConfigTemplate.Execute(&masterBuf, d.State)
-	if err != nil {
-		return nil, err
-	}
-	masterBytes, err := json.Marshal(masterBuf.String())
-	if err != nil {
-		panic(err)
-	}
-	myriadConfig.MasterCloudConfig = string(masterBytes)
-
-	var nodeBuf bytes.Buffer
-	err = NodeCloudConfigTemplate.Execute(&nodeBuf, d.State)
-	if err != nil {
-		panic(err)
-	}
-	nodeBytes, err := json.Marshal(nodeBuf.String())
-	if err != nil {
-		panic(err)
-	}
-	myriadConfig.NodeCloudConfig = string(nodeBytes)
-
-	return myriadConfig, nil
-}
-*/
 
 func PopulateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer

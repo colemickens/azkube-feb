@@ -32,7 +32,7 @@ func NewCreatePkiCmd() *cobra.Command {
 				panic(err)
 			}
 
-			state = RunCreatePkiCmd(state)
+			RunCreatePkiCmd(state)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -48,7 +48,10 @@ func NewCreatePkiCmd() *cobra.Command {
 	return createPkiCmd
 }
 
-func RunCreatePkiCmd(stateIn *util.State) (stateOut *util.State) {
-	*stateOut = *stateIn
-	return stateOut
+func RunCreatePkiCmd(state *util.State) {
+	var err error
+	state.Pki, err = util.GeneratePki(*state.Common)
+	if err != nil {
+		panic(err)
+	}
 }

@@ -70,6 +70,10 @@ type AdRoleAssignment struct {
 	PrincipalID      string `json:"principalId,omitempty"`
 }
 
+func (app *AppProperties) ServicePrincipalPkcs12() {
+	// render private key and cert to pfx and return
+}
+
 func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL string) (appProperties *AppProperties, err error) {
 	appProperties = &AppProperties{}
 

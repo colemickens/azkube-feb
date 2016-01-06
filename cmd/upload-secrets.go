@@ -29,7 +29,6 @@ func NewUploadSecretsCmd() *cobra.Command {
 				[]reflect.Type{
 					reflect.TypeOf(state.Common),
 					reflect.TypeOf(state.App),
-					reflect.TypeOf(state.Ssh),
 					reflect.TypeOf(state.Pki),
 					reflect.TypeOf(state.Vault),
 				},
@@ -42,7 +41,7 @@ func NewUploadSecretsCmd() *cobra.Command {
 				panic(err)
 			}
 
-			state = RunUploadSecretsCmd(state)
+			RunUploadSecretsCmd(state)
 			err = WriteState(statePath, state)
 			if err != nil {
 				panic(err)
@@ -57,8 +56,42 @@ func NewUploadSecretsCmd() *cobra.Command {
 	return uploadSecretsCmd
 }
 
-func RunUploadSecretsCmd(stateIn *util.State) (stateOut *util.State) {
-	*stateOut = *stateIn
+func RunUploadSecretsCmd(state *util.State) {
+	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e")
+	if err != nil {
+		panic(err)
+	}
 
-	return stateOut
+	// TODO: factor this out so it can be shared with install-certificates
+	secrets := map[string]string{
+		"pki/ca.crt":                               "ca-crt",
+		"pki/apiserver.crt":                        "apiserver-crt",
+		"pki/apiserver.key":                        "apiserver-key",
+		"pki/node-proxy-kubeconfig":                "node-proxy-kubeconfig",
+		"pki/node-kubelet-kubeconfig":              "node-kubelet-kubeconfig",
+		"pki/master-proxy-kubeconfig":              "master-proxy-kubeconfig",
+		"pki/master-kubelet-kubeconfig":            "master-kubelet-kubeconfig",
+		"pki/master-scheduler-kubeconfig":          "master-scheduler-kubeconfig",
+		"pki/master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
+	}
+
+	servicePrincipalSecretURL, err := d.VaultClient.PutSecret(
+		state.Vault.Name,
+		"servicePrincipal-pfx",
+		"pki/servicePrincipal.pfx",
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	for secretPath, secretName := range secrets {
+		_, err = d.VaultClient.PutSecret(state.Vault.Name, secretName, secretPath)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	state.Secrets = &util.SecretsProperties{
+		ServicePrincipalSecretURL: servicePrincipalSecretURL,
+	}
 }

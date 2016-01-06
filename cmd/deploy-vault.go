@@ -14,6 +14,7 @@ const (
 
 func NewDeployVaultCmd() *cobra.Command {
 	var statePath string
+	var vaultName string
 
 	var deployVaultCmd = &cobra.Command{
 		Use:   "deploy-vault",
@@ -28,16 +29,19 @@ func NewDeployVaultCmd() *cobra.Command {
 				[]reflect.Type{
 					reflect.TypeOf(state.Common),
 					reflect.TypeOf(state.App),
-					reflect.TypeOf(state.Ssh),
-					reflect.TypeOf(state.Pki),
+				},
+				[]reflect.Type{
 					reflect.TypeOf(state.Vault),
 					reflect.TypeOf(state.Secrets),
 					reflect.TypeOf(state.Myriad),
 				},
-				[]reflect.Type{},
 			)
 
-			state = RunDeployVaultCmd(state)
+			if vaultName == "" {
+				vaultName = state.Common.DeploymentName + "-vault"
+			}
+
+			RunDeployVaultCmd(state, vaultName)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -49,12 +53,32 @@ func NewDeployVaultCmd() *cobra.Command {
 	}
 
 	deployVaultCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
+	deployVaultCmd.Flags().StringVarP(&vaultName, "vaultName", "v", "", "vault name (will be derived from deployment name if empty")
 
 	return deployVaultCmd
 }
 
-func RunDeployVaultCmd(stateIn *util.State) (stateOut *util.State) {
-	*stateOut = *stateIn
+// TODO: should these get a copy of state and return just their subelement?
+func RunDeployVaultCmd(state *util.State, vaultName string) {
+	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e") // TODO (Colemickens): obviously
+	if err != nil {
+		panic(err)
+	}
 
-	return stateOut
+	vaultTemplateInput := util.VaultTemplateInput{
+		VaultName:                vaultName,
+		TenantID:                 state.Common.TenantID,
+		ServicePrincipalObjectID: state.App.ServicePrincipalObjectID,
+	}
+
+	vaultTemplate, err := util.PopulateTemplate(util.VaultTemplate, vaultTemplateInput)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = d.DoDeployment(*state.Common, "vault", vaultTemplate, true)
+
+	state.Vault = &util.VaultProperties{
+		Name: vaultName,
+	}
 }

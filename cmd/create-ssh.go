@@ -27,20 +27,18 @@ func NewCreateSshCmd() *cobra.Command {
 			state, err = ReadAndValidateState(statePath,
 				[]reflect.Type{
 					reflect.TypeOf(state.Common),
-					reflect.TypeOf(state.App),
+				},
+				[]reflect.Type{
 					reflect.TypeOf(state.Ssh),
-					reflect.TypeOf(state.Pki),
-					reflect.TypeOf(state.Vault),
 					reflect.TypeOf(state.Secrets),
 					reflect.TypeOf(state.Myriad),
 				},
-				[]reflect.Type{},
 			)
 			if err != nil {
 				panic(err)
 			}
 
-			state = RunCreateSshCmd(state)
+			RunCreateSshCmd(state)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -56,8 +54,10 @@ func NewCreateSshCmd() *cobra.Command {
 	return createSshCmd
 }
 
-func RunCreateSshCmd(stateIn *util.State) (stateOut *util.State) {
-	*stateOut = *stateIn
-
-	return stateOut
+func RunCreateSshCmd(state *util.State) {
+	var err error
+	state.Ssh, err = util.GenerateSsh()
+	if err != nil {
+		panic(err)
+	}
 }

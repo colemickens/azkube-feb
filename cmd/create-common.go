@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"encoding/hex"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -22,22 +23,23 @@ func NewCreateCommonCmd() *cobra.Command {
 	var resourceGroup string
 	var subscriptionID string
 	var tenantID string
+	var masterFQDN string
 
 	var createCommonCmd = &cobra.Command{
-		Use:   "create-config",
-		Short: "creates base configuration needed by subsequent stages",
+		Use:   "create-common",
+		Short: "creates common configuration needed by subsequent stages",
 		Long:  createCommonLongDescription,
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting create-config command")
 
 			if _, err := os.Stat(statePath); err == nil {
 			} else {
+				ioutil.WriteFile(statePath, []byte("{}"), os.ModePerm)
 				log.Println("no state file, creating empty one")
 			}
 
-			var state *util.State
-			var err error
-			state, err = ReadAndValidateState(
+			state := &util.State{}
+			state, err := ReadAndValidateState(
 				statePath,
 				[]reflect.Type{},
 				[]reflect.Type{
@@ -55,18 +57,25 @@ func NewCreateCommonCmd() *cobra.Command {
 			}
 
 			if deploymentName == "" {
-				now := time.Now().Format("200601012150405")
-				nowHex := hex.EncodeToString([]byte(now))
-				log.Println("deploymentNameDefault time:", now)
-				log.Println("deploymentNameDefault  hex:", nowHex)
-				deploymentName = "kube-" + nowHex
+				deploymentName = fmt.Sprintf("kube-%s", time.Now().Format("20060102-150405"))
 			}
 
 			if resourceGroup == "" {
 				resourceGroup = deploymentName
 			}
 
-			state = RunCreateCommonCmd(state, deploymentName, location, subscriptionID, tenantID, resourceGroup)
+			// TODO(colemickens): validate location
+
+			if masterFQDN == "" {
+				masterHostname := fmt.Sprintf("%s-master", deploymentName)
+				masterFQDN = fmt.Sprintf("https://%s.%s.cloudapp.azure.net", masterHostname, location)
+			}
+
+			if subscriptionID == "" || tenantID == "" {
+				panic("subscriptionId and tenantId must be specified!")
+			}
+
+			state = RunCreateCommonCmd(state, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -83,21 +92,25 @@ func NewCreateCommonCmd() *cobra.Command {
 	createCommonCmd.Flags().StringVarP(&deploymentName, "deployment-name", "d", "", "name of the deployment (one will be auto-generated if empty)")
 	createCommonCmd.Flags().StringVarP(&resourceGroup, "resource-group", "r", "", "the resource group name to use (deployment name is used if empty)")
 	createCommonCmd.Flags().StringVarP(&location, "location", "l", "westus", "location for the deployment")
-	createCommonCmd.Flags().StringVarP(&subscriptionID, "subscription-id", "s", "", "subscription id to deploy into")
+	createCommonCmd.Flags().StringVarP(&subscriptionID, "subscription-id", "i", "", "subscription id to deploy into")
 	createCommonCmd.Flags().StringVarP(&tenantID, "tenant-id", "t", "", "tenant id of account")
+	createCommonCmd.Flags().StringVarP(&masterFQDN, "master-fqdn", "m", "", "master fqdn (will use automatic cloudapp hostname otherwise) (NOTE: THIS AFFECTS CERT SUBJECT NAME)")
 
 	return createCommonCmd
 }
 
-func RunCreateCommonCmd(stateIn *util.State, deploymentName, location, subscriptionID, tenantID, resourceGroup string) (stateOut *util.State) {
-	*stateOut = *stateIn
+func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN string) (stateOut *util.State) {
+	log.Println("made it here")
+
+	stateOut = &*stateIn
 
 	stateOut.Common = &util.CommonProperties{
 		DeploymentName: deploymentName,
+		ResourceGroup:  resourceGroup,
 		Location:       location,
 		SubscriptionID: subscriptionID,
 		TenantID:       tenantID,
-		ResourceGroup:  resourceGroup,
+		MasterFQDN:     masterFQDN,
 	}
 
 	return stateOut

@@ -69,43 +69,6 @@ func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secre
 	return "", nil
 }
 
-func (v *VaultClient) UploadSecrets(vaultProperties VaultProperties) (secretsProperties *SecretsProperties, err error) {
-	// TODO(colemickens): populate this from the same place that is consumed from
-	secrets := map[string]string{
-		"pki/ca.crt":                               "ca-crt",
-		"pki/apiserver.crt":                        "apiserver-crt",
-		"pki/apiserver.key":                        "apiserver-key",
-		"pki/node-proxy-kubeconfig":                "node-proxy-kubeconfig",
-		"pki/node-kubelet-kubeconfig":              "node-kubelet-kubeconfig",
-		"pki/master-proxy-kubeconfig":              "master-proxy-kubeconfig",
-		"pki/master-kubelet-kubeconfig":            "master-kubelet-kubeconfig",
-		"pki/master-scheduler-kubeconfig":          "master-scheduler-kubeconfig",
-		"pki/master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
-	}
-
-	servicePrincipalSecretURL, err := v.PutSecret(
-		vaultProperties.Name,
-		"servicePrincipal-pfx",
-		"pki/servicePrincipal.pfx",
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	for secretPath, secretName := range secrets {
-		_, err = v.PutSecret(vaultProperties.Name, secretName, secretPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	secretsProperties = &SecretsProperties{
-		ServicePrincipalSecretURL: servicePrincipalSecretURL,
-	}
-
-	return secretsProperties, nil
-}
-
 func (v *VaultClient) GetSecret(vaultName, secretName string) (*string, error) {
 	p := map[string]interface{}{
 		"secret-name":    secretName,

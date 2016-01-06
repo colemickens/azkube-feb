@@ -1,0 +1,1 @@
+{"Common":{"DeploymentName":"kube-20160104-175250","ResourceGroup":"kube-20160104-175250","Location":"westus","TenantID":"","SubscriptionID":"","MasterFQDN":"https://kube-20160104-175250-master.westus.cloudapp.azure.net"},"App":null,"Pki":null,"Ssh":null,"Vault":null,"Secrets":null,"Myriad":null}
