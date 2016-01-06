@@ -8,9 +8,6 @@ import (
 	"math/big"
 	"net"
 	"time"
-
-	//"github.com/cloudflare/cfssl/csr"
-	//"github.com/cloudflare/cfssl/initca"
 )
 
 const (

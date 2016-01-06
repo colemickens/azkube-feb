@@ -1,15 +1,15 @@
 package: azkube
 import:
 - package: github.com/Azure/azure-sdk-for-go
-  version: 84843207ea0c77c8c8aecbe2e16ac77caa8ce9cc
   subpackages:
   - /arm/resources
-- package: github.com/cloudflare/cfssl
-  version: 755f4128c7c69bad69117e44ffa028c1847a0608
-  subpackages:
-  - /initca
-  - /csr
 - package: github.com/spf13/cobra
 - package: code.google.com/p/go-uuid
   subpackages:
   - /uuid
+- package: golang.org/x/crypto
+  vcs: git
+  repo: https://github.com/colemickens/crypto
+  version: 147b0a0d44eaebb0e4b9c780d01b9af728575d49
+  subpackages:
+  - /pkcs12

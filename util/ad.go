@@ -1,7 +1,3 @@
-// +build ignore
-
-// blocked on AD anyway, need to make progress elsewhere
-
 package util
 
 import (
@@ -11,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	// "io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -20,6 +15,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	"golang.org/x/crypto/pkcs12"
 )
 
 const (
@@ -31,6 +27,8 @@ const (
 	AzureActiveDirectoryBaseURL           = "https://graph.windows.net/{tenant-id}"
 	AzureManagementBaseURL                = "https://management.azure.net/{tenant-id}"
 	AzureActiveDirectoryContributorRoleId = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+
+	ServicePrincipalKeySize = 4096
 )
 
 type AdClient struct {
@@ -72,26 +70,22 @@ type AdRoleAssignment struct {
 
 func (app *AppProperties) ServicePrincipalPkcs12() {
 	// render private key and cert to pfx and return
+	_ = pkcs12.Encode
 }
 
-func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL string) (appProperties *AppProperties, err error) {
-	appProperties = &AppProperties{}
+func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*AppProperties, error) {
+	app := &AppProperties{}
 
 	notBefore := time.Now()
 	notAfter := time.Now().Add(5 * 365 * 24 * time.Hour)
 	notAfter = time.Now().Add(10000 * 24 * time.Hour)
 
 	// create the service principal's private key
-	privateKey, err := rsa.GenerateKey(rand.Reader, KeySize)
+	privateKey, err := rsa.GenerateKey(rand.Reader, ServicePrincipalKeySize)
 	if err != nil {
 		return nil, err
 	}
-	privateKeyPemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-	}
-	privateKeyPemBytes := pem.EncodeToMemory(privateKeyPemBlock)
-	appProperties.ServicePrincipalPrivateKey = *privateKey
+	app.ServicePrincipalPrivateKey = privateKey // convert to PkiKeyCertPair
 
 	// create the cert and store it in state
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -119,7 +113,7 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 	if err != nil {
 		return nil, err
 	}
-	appProperties.ServicePrincipalCertificate = *certificate
+	app.ServicePrincipalCertificate = *certificate
 	certificatePemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificateDer})
 	certificatePem := string(certificatePemBytes)
 	parts := strings.Split(certificatePem, "\n")
@@ -145,7 +139,7 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		},
 	}
 
-	p := map[string]interface{}{"tenant-id": commonConfig.TenantID}
+	p := map[string]interface{}{"tenant-id": common.TenantID}
 	q := map[string]interface{}{"api-version": AzureActiveDirectoryApiVersion}
 
 	forceItIn := `{"availableToOtherTenants":false,"displayName":"test01113","homepage":"http://test000113","identifierUris":["http://test000113"],"keyCredentials":[{"startDate":"2015-12-18T08:25:21.694Z","endDate":"2043-05-05T08:02:54.000Z","value":"MIIDBDCCAeygAwIBAgIRAMVbOzlLG6kqcxqSBJNcHlowDQYJKoZIhvcNAQELBQAw\nIjEPMA0GA1UEChMGQXprdWJlMQ8wDQYDVQQDEwZBemt1YmUwHhcNMTUxMjE4MDgx\nODMxWhcNNDMwNTA1MDgxODMxWjAiMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMT\nBkF6a3ViZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKvd96W+mUO8\nNKbexxKLmrkOLVixzroDiDew3uIT94miwvDcnNCx79XXPOl57cyPwj8Hs5z47gqY\nuwlUayVSCLl81ixog3k0mwAh03O1W3pwdafpCC6qOOPKY4daEjS4raGj8pPvpEto\n2Tv5jGTpuKAeqmw/G0t3cGSs9ruOBO0WEtzd6of0zXTLEtt6SnKbeLrrU25g6qBg\nSPSPPtT88zNjhwA0q1FwSOEpbTjnWw1Ujw6RAk4xF+2wImeYAkwcix50zWAErLkb\ndrWszoEaX1H4mlhb80TOnnksfoQctDVfnS8IUxDIri9Dy15APKyoRG45l+ni6dS+\nDmc4Uv/VP9UCAwEAAaM1MDMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsG\nAQUFBwMBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggEBAIiuwS/ZkUiQ\ncgakyVLnzb/egvhlSB+ol72IyKiKa4PzgsX+JxhHC5+5p2g8IY5o3mfK2GxkiA23\nOdwxJDGepJuQrU3Aue2DC8U7PdCH/PweF+TWXU2DeyYp/8fhzD12gIS8TmJfgozM\nYiMaf9dyKFU/GrbosfjNS6GUrhbeZYKF3EfqwEe8Igv4JqQvQWpxxv8ckyisdBlq\nTw/GY8XWAfOnhYwVU0q1zS3aQpKahwIZBGqDNulXBHgRs2261UykSIUXyVc5Uawv\nx7uVdZgLjCfhR1XuBiBuTwyWb5xkbkP/lJLrl06UmJbuwcj1+pyXfnevCDbfnPNO\nGFtPzdmktNw=","keyId":"9dfcaeb7-3367-4387-ab92-52da1a789560","usage":"Verify","type":"AsymmetricX509Cert"}]}`
@@ -169,7 +163,7 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		return nil, err
 	}
 
-	resp, err := d.AdClient.Send(req, http.StatusOK)
+	resp, err := a.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -180,16 +174,16 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		return nil, err
 	}
 
-	appProperties.ApplicationID = applicationResp.ApplicationID
+	app.ApplicationID = applicationResp.ApplicationID
 
 	log.Println("sleep 10")
 	time.Sleep(10 * time.Second)
 
 	// create service principal
 	servicePrincipalReq := AdServicePrincipal{
-		ApplicationID:         appProperties.ApplicationID,
+		ApplicationID:         app.ApplicationID,
 		AccountEnabled:        true,
-		ServicePrincipalNames: []string{d.Config.AppURL},
+		ServicePrincipalNames: []string{appURL},
 	}
 
 	req, err = autorest.Prepare(&http.Request{},
@@ -204,7 +198,7 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		return nil, err
 	}
 
-	resp, err = d.AdClient.Send(req, http.StatusOK)
+	resp, err = a.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +209,7 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		return nil, err
 	}
 
-	appProperties.ServicePrincipalObjectID = servicePrincipalResp.ObjectID
+	app.ServicePrincipalObjectID = servicePrincipalResp.ObjectID
 
 	log.Println("sleep 10")
 	time.Sleep(10 * time.Second)
@@ -223,18 +217,18 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 	// create role assignment for service principal
 
 	roleDefinitionId := "/subscriptions/{subscription-id}/providers/Microsoft.Authorization/roleDefinitions/{role-definition-id}"
-	roleDefinitionId = strings.Replace(roleDefinitionId, "{subscription-id}", d.Config.SubscriptionID, -1)
+	roleDefinitionId = strings.Replace(roleDefinitionId, "{subscription-id}", common.SubscriptionID, -1)
 	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureActiveDirectoryContributorRoleId, -1)
 
 	roleAssignmentReq := AdRoleAssignment{
-		PrincipalID:      appProperties.ServicePrincipalObjectID,
+		PrincipalID:      app.ServicePrincipalObjectID,
 		RoleDefinitionID: roleDefinitionId,
 	}
 
 	p_role := p
 	p_role["role-assignment-name"] = "azkube_deployer_role"
-	p_role["subscription-id"] = d.Config.SubscriptionID
-	p_role["resource-group-name"] = d.Config.ResourceGroup
+	p_role["subscription-id"] = common.SubscriptionID
+	p_role["resource-group-name"] = common.ResourceGroup
 	q_role := map[string]interface{}{"api-version": AzureRoleManagementApiVersion}
 
 	// TODO - Abandoning this until we find out if Authorization in azure/arm should include a client for this purpose
@@ -252,10 +246,10 @@ func (a *AdClient) CreateApp(commonConfig CommonProperties, appName, appURL stri
 		return nil, err
 	}
 
-	resp, err = d.AdClient.Send(req, http.StatusOK)
+	resp, err = a.Send(req, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
-	return appProperties, nil
+	return app, nil
 }
