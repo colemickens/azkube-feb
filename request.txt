@@ -1,0 +1,18 @@
+{
+  "availableToOtherTenants": false,
+  "displayName": "kube-20160107-171946",
+  "homepage": "http://kube-20160107-171946/",
+  "identifierUrls": [
+    "http://kube-20160107-171946/"
+  ],
+  "keyCredentials": [
+    {
+      "keyId": "a7ae4895-9442-4c79-b5a4-7c8daaa71682",
+      "startDate": "2015-12-18T08:25:21.694Z",
+      "endDate": "2043-05-05T08:02:54.000Z",
+      "type": "AsymmetricX509Cert",
+      "usage": "Verify",
+      "value": "MIIE7jCCAtagAwIBAgIQBip69jdafFIsB284Ob035zANBgkqhkiG9w0BAQsFADAi\nMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMTBkF6a3ViZTAeFw0xNjAxMDgwMTQ5\nMTZaFw00MzA1MjYwMTQ5MTZaMCIxDzANBgNVBAoTBkF6a3ViZTEPMA0GA1UEAxMG\nQXprdWJlMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAp0JbfC8aMoL3\nEFDFBc1YelVs6WTnNV39oPjpWzcmu8ForLuYOdxjpHAZ7oEiiQa/6ItvKSr4C6BX\nE1IFqKirxgDSdrbnVTgLRnU0xgKD6A++iLf+hWMAu7DPovkGglQhKXqEfjDBtkJR\n7JyGAENVmxxhuhoB4fCMs59kaeQ1qcdSQdoJyOOolMrdzJkbYdDUoYRS83SI3RIH\nce3X3P88uoYNKzL65K+OhxJsY8hEuLeHjOy0J8OYeZwBrXRb/fTl22MWmX/kS5K/\nDbxMudSxUQK2TigxMnwVqpMqsiXSxTAEmsunCiy7j+336SzldrIr4WFiXFCovNDi\nxVChm7j6jCpnGwdxXm02xmi2fPG+I1cDubjFiWbJcbX3WSZlaeqNUIH9PgGoSD1e\nsjJu6zpkbFB0H20NaGVfPQYcII+W1lJWjbV9YvYWqLPA3Vkrq+NTdNVbdhSeFe/q\nACnbIgZmqQX3CuqzALtW+EujVQeTdTUgtukUdGRnq3esZBC7rp1JK4VDKfa2wA7X\n/r2wAo3mjg8VqQnshBHJewjNszgSO46M3mDXGQQz7PJwchdlmZllcKDb/1fyzf/i\nakrpFQgt5Ukzcb6I9ajgXmgZOMssbWdx4KCUnC58T8xJZCECXNnNey5NhDEP82IC\nBb00EAgTF1+pilH6SysLYAoFJV/tcAECAwEAAaMgMB4wDgYDVR0PAQH/BAQDAgWg\nMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggIBABrkRyCUptYeDzgWUDtV\n9U4AHtL3N5BJQvw+6u4cFeE/R9NFgBaI658ZYko/XANdqAWJecFofmutpGy9FXTf\nI62tCKFl+i3xhQ51D2FAIHJ3j6a9kLzxYqcdeYPhNdO4Nt0p1MgcScZ6BY3rdRak\nbsEs2ns/qAzLwskOo4SuZs04bohAm8gUqUfD0tYbwehNHwm4mKBr23FsksvduCu8\naSHf8k1S69MT9wwvKvlIjLn5jVOj9S8K0unj89xw16CSeIbJb1YDk/LzETQJjVSB\nnXqSxlwhZurzjtTzquZHxu/IoZNAiHURR5rcSmuZl8uOvLhGmUC4ZN6CqAEBZ1hG\n2l0ucBONh0nw8Ngd7XMJeAXhyLedt3aiG+Y64pV8X4vc5DXzf8ItCISzN+ncSoPV\n3AcrOVTa4oGaCcQYW7Ta24YJQhfdoutsbuHX5lcg4Jcopxl2Gl/0doirUb6vDumx\nR9DBSISacJ9wbYox10gul/oqrDkfzKnGe77UKnJAOPFYpPhokDGOIs66/8Aq72Dt\nHYzLLCTwo2rpaNjSYzvCsPwQ4yYfZDh05kR2GkD+LoshLWWnFiVoVjwdY/TEgjC0\nRjZaCzEl9KDdTmRfqUUM113LyCp4mwZP+9MqDrWQyX9RLvuR882kuJMmyBWAzUoh\nsrQhwLnNS4U5X+dy7SL0nlj1"
+    }
+  ]
+}

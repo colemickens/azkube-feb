@@ -103,10 +103,10 @@ func CreateServicePrincipalSecrets(notBefore, notAfter time.Time) (certDerBytes 
 			CommonName:   "Azkube",
 			Organization: []string{"Azkube"},
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+		KeyUsage:  x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		//ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
 
@@ -138,6 +138,21 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	app.ServicePrincipalPrivateKeyPem = string(privateKeyPem)
 	app.ServicePrincipalCertificatePem = string(certificatePem)
 
+	certificateData := app.ServicePrincipalCertificatePem
+
+	ioutil.WriteFile("./before-trim.json", []byte(certificateData), 0666)
+
+	certificateDataParts := strings.Split(certificateData, "\n")
+	certificateData = strings.Join(certificateDataParts[1:len(certificateDataParts)-2], "\n")
+
+	ioutil.WriteFile("./after-trim.json", []byte(certificateData), 0666)
+
+	startDate := notBefore.Format(time.RFC3339)
+	endDate := notAfter.Format(time.RFC3339)
+
+	startDate = "2015-12-18T08:25:21.694Z"
+	endDate = "2043-05-05T08:02:54.000Z"
+
 	////////////////////////////////////////////////////////////////////////////////////
 	// create application
 	applicationReq := AdApplication{
@@ -150,9 +165,9 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 				KeyId:     uuid.New(),
 				Type:      "AsymmetricX509Cert",
 				Usage:     "Verify",
-				StartDate: notBefore.Format(time.RFC3339),
-				EndDate:   notAfter.Format(time.RFC3339),
-				Value:     app.ServicePrincipalCertificatePem,
+				StartDate: startDate,
+				EndDate:   endDate,
+				Value:     certificateData,
 			},
 		},
 	}
