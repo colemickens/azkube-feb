@@ -53,3 +53,11 @@ deploy-myriad:
 		--option \
 		--option \
 		--option
+
+clean:
+	rm -f azkube
+	rm -f state.json
+
+run: quick create-common create-app create-pki create-ssh deploy-vault upload-secrets deploy-myriad
+
+clean-run: clean run

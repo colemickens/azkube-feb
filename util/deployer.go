@@ -10,7 +10,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/azure-sdk-for-go/arm/resources"
+	"github.com/Azure/azure-sdk-for-go/arm/authorization"
+	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 )
 
 func NewDeployerWithToken(subscriptionID, tenantID, clientID, clientSecret string) (deployer *Deployer, err error) {
@@ -73,6 +74,7 @@ func newDeployer(subscriptionID, tenantID, clientID string, secret azure.Service
 	deployer = &Deployer{}
 	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
 	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
+	deployer.RoleAssignmentsClient = authorization.NewRoleAssignmentsClient(subscriptionID)
 	deployer.AdClient = AdClient{autorest.Client{}}
 	deployer.VaultClient = VaultClient{autorest.Client{}}
 
@@ -84,13 +86,14 @@ func newDeployer(subscriptionID, tenantID, clientID string, secret azure.Service
 	if err != nil {
 		return nil, err
 	}
-	adScopeSpt, err := withSecret(tenantID, clientID, AzureActiveDirectoryScope, secret)
+	adScopeSpt, err := withSecret(tenantID, clientID, AzureAdScope, secret)
 	if err != nil {
 		return nil, err
 	}
 
 	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
 	deployer.GroupsClient.Authorizer = resourcesScopeSpt
+	deployer.RoleAssignmentsClient.Authorizer = resourcesScopeSpt
 	deployer.VaultClient.Authorizer = vaultScopeSpt
 	deployer.AdClient.Authorizer = adScopeSpt
 

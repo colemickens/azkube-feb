@@ -5,7 +5,7 @@ import (
 	"log"
 
 	// "github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/azure-sdk-for-go/arm/resources"
+	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 )
 
 func (d *Deployer) DoDeployment(commonProperties CommonProperties, name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {

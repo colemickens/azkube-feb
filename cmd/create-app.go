@@ -75,12 +75,24 @@ func RunCreateAppCmd(state *util.State, appName, appURL string) {
 		state.Common.TenantID,
 		"http://azkube",                                // client id
 		"fk17GvW4GYj7Ju1g/sUGB4Jr39HQ+hiBW3VXTHRvnRE=") // client secret
+	if err != nil {
+		panic(err)
+	}
 
+	_, err = d.EnsureResourceGroup(
+		state.Common.ResourceGroup,
+		state.Common.Location,
+		true)
 	if err != nil {
 		panic(err)
 	}
 
 	state.App, err = d.AdClient.CreateApp(*state.Common, appName, appURL)
+	if err != nil {
+		panic(err)
+	}
+
+	err = d.CreateRoleAssignment(*state.Common, state.App.ServicePrincipalObjectID)
 	if err != nil {
 		panic(err)
 	}

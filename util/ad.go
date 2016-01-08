@@ -14,17 +14,20 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/azure-sdk-for-go/arm/authorization"
 	"golang.org/x/crypto/pkcs12"
 )
 
 const (
-	AzureActiveDirectoryScope      = "https://graph.windows.net/"
-	AzureActiveDirectoryApiVersion = "1.6"
-	AzureActiveDirectoryBaseURL    = "https://graph.windows.net/{tenant-id}"
+	AzureAdScope      = "https://graph.windows.net/"
+	AzureAdApiVersion = "1.6"
+	AzureAdBaseURL    = "https://graph.windows.net/{tenant-id}"
 
-	AzureRoleManagementApiVersion         = "2015-07-01"
-	AzureManagementBaseURL                = "https://management.azure.com/{tenant-id}"
-	AzureActiveDirectoryContributorRoleId = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+	AzureRoleManagementApiVersion = "2015-07-01"
+	AzureManagementBaseURL        = "https://management.azure.com/{tenant-id}"
+
+	AzureAdRoleReferenceTemplate = "/subscriptions/{subscription-id}/providers/Microsoft.Authorization/roleDefinitions/{role-definition-id}"
+	AzureAdContributorRoleId     = "b24988ac-6180-42a0-ab88-20f7382dd24c"
 
 	ServicePrincipalKeySize = 4096
 )
@@ -162,12 +165,12 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	}
 
 	p := map[string]interface{}{"tenant-id": common.TenantID}
-	q := map[string]interface{}{"api-version": AzureActiveDirectoryApiVersion}
+	q := map[string]interface{}{"api-version": AzureAdApiVersion}
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
 		autorest.AsPost(),
-		autorest.WithBaseURL(AzureActiveDirectoryBaseURL),
+		autorest.WithBaseURL(AzureAdBaseURL),
 		autorest.WithPath("applications"),
 		autorest.WithPathParameters(p),
 		autorest.WithQueryParameters(q),
@@ -206,7 +209,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	req, err = autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
 		autorest.AsPost(),
-		autorest.WithBaseURL(AzureActiveDirectoryBaseURL),
+		autorest.WithBaseURL(AzureAdBaseURL),
 		autorest.WithPath("servicePrincipals"),
 		autorest.WithPathParameters(p),
 		autorest.WithQueryParameters(q),
@@ -231,42 +234,32 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	log.Println("sleep 10")
 	time.Sleep(10 * time.Second)
 
-	// create role assignment for service principal
-
-	roleDefinitionId := "/subscriptions/{subscription-id}/providers/Microsoft.Authorization/roleDefinitions/{role-definition-id}"
-	roleDefinitionId = strings.Replace(roleDefinitionId, "{subscription-id}", common.SubscriptionID, -1)
-	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureActiveDirectoryContributorRoleId, -1)
-
-	roleAssignmentReq := AdRoleAssignment{
-		PrincipalID:      app.ServicePrincipalObjectID,
-		RoleDefinitionID: roleDefinitionId,
-	}
-
-	p_role := p
-	p_role["role-assignment-name"] = "azkube_deployer_role"
-	p_role["subscription-id"] = common.SubscriptionID
-	p_role["resource-group-name"] = common.ResourceGroup
-	q_role := map[string]interface{}{"api-version": AzureRoleManagementApiVersion}
-
-	// TODO - Abandoning this until we find out if Authorization in azure/arm should include a client for this purpose
-	// TODO(colemickens): Update azure-sdk-for-go to use new Authorization clients
-
-	req, err = autorest.Prepare(&http.Request{},
-		autorest.AsJSON(),
-		autorest.AsPost(),
-		autorest.WithBaseURL(AzureManagementBaseURL),
-		autorest.WithPath("/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}/providers/Microsoft.Authorization/roleAssignments/{role-assignment-name}"),
-		autorest.WithPathParameters(p_role),
-		autorest.WithQueryParameters(q_role),
-		autorest.WithJSON(roleAssignmentReq))
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err = a.Send(req, http.StatusCreated)
-	if err != nil {
-		return nil, err
-	}
-
 	return app, nil
+}
+
+func (d *Deployer) CreateRoleAssignment(common CommonProperties, principalID string) error {
+	roleAssignmentName := uuid.New()
+
+	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", common.SubscriptionID, -1)
+	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureAdContributorRoleId, -1)
+
+	scope := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", common.SubscriptionID, common.ResourceGroup)
+
+	roleAssignmentParameters := authorization.RoleAssignmentCreateParameters{
+		Properties: &authorization.RoleAssignmentProperties{
+			RoleDefinitionID: &roleDefinitionId,
+			PrincipalID:      &principalID,
+		},
+	}
+
+	_, err := d.RoleAssignmentsClient.Create(
+		scope,
+		roleAssignmentName,
+		roleAssignmentParameters,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

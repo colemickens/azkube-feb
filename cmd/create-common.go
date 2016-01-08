@@ -82,7 +82,7 @@ func NewCreateCommonCmd() *cobra.Command {
 				panic("master ip was invalid")
 			}
 
-			state = RunCreateCommonCmd(state, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN, masterIPparsed)
+			RunCreateCommonCmd(state, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN, masterIPparsed)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -107,12 +107,8 @@ func NewCreateCommonCmd() *cobra.Command {
 	return createCommonCmd
 }
 
-func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN string, masterIP net.IP) (stateOut *util.State) {
-	log.Println("made it here")
-
-	stateOut = &*stateIn
-
-	stateOut.Common = &util.CommonProperties{
+func RunCreateCommonCmd(state *util.State, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN string, masterIP net.IP) {
+	state.Common = &util.CommonProperties{
 		DeploymentName: deploymentName,
 		ResourceGroup:  resourceGroup,
 		Location:       location,
@@ -122,5 +118,4 @@ func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, loca
 		MasterIP:       masterIP,
 	}
 
-	return stateOut
 }

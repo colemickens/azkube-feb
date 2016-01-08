@@ -2,7 +2,7 @@ package: azkube
 import:
 - package: github.com/Azure/azure-sdk-for-go
   subpackages:
-  - /arm/resources
+  - /arm/resources/resources
 - package: github.com/spf13/cobra
 - package: code.google.com/p/go-uuid
   subpackages:

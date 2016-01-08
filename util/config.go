@@ -3,7 +3,8 @@ package util
 import (
 	"net"
 
-	"github.com/Azure/azure-sdk-for-go/arm/resources"
+	"github.com/Azure/azure-sdk-for-go/arm/authorization"
+	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 )
 
 type CommonProperties struct {
@@ -74,10 +75,11 @@ type State struct {
 }
 
 type Deployer struct {
-	DeploymentsClient resources.DeploymentsClient
-	GroupsClient      resources.GroupsClient
-	VaultClient       VaultClient
-	AdClient          AdClient
+	DeploymentsClient     resources.DeploymentsClient
+	GroupsClient          resources.GroupsClient
+	RoleAssignmentsClient authorization.RoleAssignmentsClient
+	VaultClient           VaultClient
+	AdClient              AdClient
 }
 
 type VaultTemplateInput struct {
