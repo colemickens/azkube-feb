@@ -5,9 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -25,7 +23,7 @@ const (
 	AzureActiveDirectoryBaseURL    = "https://graph.windows.net/{tenant-id}"
 
 	AzureRoleManagementApiVersion         = "2015-07-01"
-	AzureManagementBaseURL                = "https://management.azure.net/{tenant-id}"
+	AzureManagementBaseURL                = "https://management.azure.com/{tenant-id}"
 	AzureActiveDirectoryContributorRoleId = "b24988ac-6180-42a0-ab88-20f7382dd24c"
 
 	ServicePrincipalKeySize = 4096
@@ -42,7 +40,7 @@ type AdApplication struct {
 	AvailableToOtherTenants bool              `json:"availableToOtherTenants"`
 	DisplayName             string            `json:"displayName,omitempty"`
 	Homepage                string            `json:"homepage,omitempty"`
-	IdentifierURLs          []string          `json:"identifierUrls,omitempty"`
+	IdentifierURIs          []string          `json:"identifierUris,omitempty"`
 	KeyCredentials          []AdKeyCredential `json:"keyCredentials,omitempty"`
 }
 
@@ -58,9 +56,9 @@ type AdKeyCredential struct {
 type AdServicePrincipal struct {
 	ObjectID string `json:"objectId,omitempty"` // readonly
 
-	ApplicationID         string   `json:"appId,omitempty"`
-	AccountEnabled        bool     `json:"accountEnabled,omitempty"`
-	ServicePrincipalNames []string `json:"servicePrincipalNames,omitempty"`
+	ApplicationID  string `json:"appId,omitempty"`
+	AccountEnabled bool   `json:"accountEnabled,omitempty"`
+	//	ServicePrincipalNames []string `json:"servicePrincipalNames,omitempty"`
 }
 
 type AdRoleAssignment struct {
@@ -138,20 +136,11 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	app.ServicePrincipalPrivateKeyPem = string(privateKeyPem)
 	app.ServicePrincipalCertificatePem = string(certificatePem)
 
-	certificateData := app.ServicePrincipalCertificatePem
-
-	ioutil.WriteFile("./before-trim.json", []byte(certificateData), 0666)
-
-	certificateDataParts := strings.Split(certificateData, "\n")
-	certificateData = strings.Join(certificateDataParts[1:len(certificateDataParts)-2], "\n")
-
-	ioutil.WriteFile("./after-trim.json", []byte(certificateData), 0666)
+	certificateDataParts := strings.Split(app.ServicePrincipalCertificatePem, "\n")
+	certificateData := strings.Join(certificateDataParts[1:len(certificateDataParts)-2], "\n")
 
 	startDate := notBefore.Format(time.RFC3339)
 	endDate := notAfter.Format(time.RFC3339)
-
-	startDate = "2015-12-18T08:25:21.694Z"
-	endDate = "2043-05-05T08:02:54.000Z"
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// create application
@@ -159,7 +148,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		AvailableToOtherTenants: false,
 		DisplayName:             appName,
 		Homepage:                appURL,
-		IdentifierURLs:          []string{appURL},
+		IdentifierURIs:          []string{appURL},
 		KeyCredentials: []AdKeyCredential{
 			AdKeyCredential{
 				KeyId:     uuid.New(),
@@ -174,18 +163,6 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 
 	p := map[string]interface{}{"tenant-id": common.TenantID}
 	q := map[string]interface{}{"api-version": AzureActiveDirectoryApiVersion}
-
-	// forceItIn := `{"availableToOtherTenants":false,"displayName":"test01113","homepage":"http://test000113","identifierUris":["http://test000113"],"keyCredentials":[{"startDate":"2015-12-18T08:25:21.694Z","endDate":"2043-05-05T08:02:54.000Z","value":"MIIDBDCCAeygAwIBAgIRAMVbOzlLG6kqcxqSBJNcHlowDQYJKoZIhvcNAQELBQAw\nIjEPMA0GA1UEChMGQXprdWJlMQ8wDQYDVQQDEwZBemt1YmUwHhcNMTUxMjE4MDgx\nODMxWhcNNDMwNTA1MDgxODMxWjAiMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMT\nBkF6a3ViZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKvd96W+mUO8\nNKbexxKLmrkOLVixzroDiDew3uIT94miwvDcnNCx79XXPOl57cyPwj8Hs5z47gqY\nuwlUayVSCLl81ixog3k0mwAh03O1W3pwdafpCC6qOOPKY4daEjS4raGj8pPvpEto\n2Tv5jGTpuKAeqmw/G0t3cGSs9ruOBO0WEtzd6of0zXTLEtt6SnKbeLrrU25g6qBg\nSPSPPtT88zNjhwA0q1FwSOEpbTjnWw1Ujw6RAk4xF+2wImeYAkwcix50zWAErLkb\ndrWszoEaX1H4mlhb80TOnnksfoQctDVfnS8IUxDIri9Dy15APKyoRG45l+ni6dS+\nDmc4Uv/VP9UCAwEAAaM1MDMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsG\nAQUFBwMBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggEBAIiuwS/ZkUiQ\ncgakyVLnzb/egvhlSB+ol72IyKiKa4PzgsX+JxhHC5+5p2g8IY5o3mfK2GxkiA23\nOdwxJDGepJuQrU3Aue2DC8U7PdCH/PweF+TWXU2DeyYp/8fhzD12gIS8TmJfgozM\nYiMaf9dyKFU/GrbosfjNS6GUrhbeZYKF3EfqwEe8Igv4JqQvQWpxxv8ckyisdBlq\nTw/GY8XWAfOnhYwVU0q1zS3aQpKahwIZBGqDNulXBHgRs2261UykSIUXyVc5Uawv\nx7uVdZgLjCfhR1XuBiBuTwyWb5xkbkP/lJLrl06UmJbuwcj1+pyXfnevCDbfnPNO\nGFtPzdmktNw=","keyId":"9dfcaeb7-3367-4387-ab92-52da1a789560","usage":"Verify","type":"AsymmetricX509Cert"}]}`
-
-	// var blahf map[string]interface{}
-	// json.Unmarshal([]byte(forceItIn), &blahf)
-	// _ = applicationReq
-	// applicationReq = blahf
-
-	_ = json.Marshal // TODO(colemickens): remove this
-
-	appReqStr, _ := json.MarshalIndent(applicationReq, "", "  ")
-	ioutil.WriteFile("./request.txt", appReqStr, 0666)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
@@ -202,7 +179,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		return nil, err
 	}
 
-	resp, err := a.Send(req, http.StatusOK)
+	resp, err := a.Send(req, http.StatusCreated)
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +198,9 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	////////////////////////////////////////////////////////////////////////////////////
 	// create service principal
 	servicePrincipalReq := AdServicePrincipal{
-		ApplicationID:         app.ApplicationID,
-		AccountEnabled:        true,
-		ServicePrincipalNames: []string{appURL},
+		ApplicationID:  app.ApplicationID,
+		AccountEnabled: true,
+		//ServicePrincipalNames: []string{appURL},
 	}
 
 	req, err = autorest.Prepare(&http.Request{},
@@ -238,7 +215,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		return nil, err
 	}
 
-	resp, err = a.Send(req, http.StatusOK)
+	resp, err = a.Send(req, http.StatusCreated)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +263,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		return nil, err
 	}
 
-	resp, err = a.Send(req, http.StatusOK)
+	resp, err = a.Send(req, http.StatusCreated)
 	if err != nil {
 		return nil, err
 	}
