@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/x509"
 	"log"
 	"reflect"
 
@@ -22,11 +23,16 @@ func NewCreatePkiCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting create-pki command")
 
-			var state *util.State
+			state := &util.State{}
 			var err error
 			state, err = ReadAndValidateState(statePath,
-				[]reflect.Type{},
-				[]reflect.Type{},
+				[]reflect.Type{
+					reflect.TypeOf(state.Common),
+				},
+				[]reflect.Type{
+					reflect.TypeOf(state.Pki),
+					reflect.TypeOf(state.Myriad),
+				},
 			)
 			if err != nil {
 				panic(err)
@@ -49,9 +55,38 @@ func NewCreatePkiCmd() *cobra.Command {
 }
 
 func RunCreatePkiCmd(state *util.State) {
+	pki := &util.PkiProperties{}
 	var err error
-	state.Pki, err = util.GeneratePki(*state.Common)
+
+	pki.CA, err = util.CreateCertificateAuthority(*state.Common)
 	if err != nil {
 		panic(err)
 	}
+
+	pki.ApiServer, err = util.CreateCertificate(*pki.CA, "kube-apiserver", x509.ExtKeyUsageServerAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	pki.Kubelet, err = util.CreateCertificate(*pki.CA, "kube-kubelet", x509.ExtKeyUsageClientAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	pki.Kubeproxy, err = util.CreateCertificate(*pki.CA, "kube-kubeproxy", x509.ExtKeyUsageClientAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	pki.Scheduler, err = util.CreateCertificate(*pki.CA, "kube-scheduler", x509.ExtKeyUsageClientAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	pki.ReplicationController, err = util.CreateCertificate(*pki.CA, "kube-replication-controller", x509.ExtKeyUsageClientAuth)
+	if err != nil {
+		panic(err)
+	}
+
+	state.Pki = pki
 }

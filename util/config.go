@@ -1,8 +1,6 @@
 package util
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
 	"net"
 
 	"github.com/Azure/azure-sdk-for-go/arm/resources"
@@ -15,21 +13,21 @@ type CommonProperties struct {
 	TenantID       string
 	SubscriptionID string
 	MasterFQDN     string
-	MasterIP       net.IP // TODO(colemickens): populate this
+	MasterIP       net.IP
 }
 
 type AppProperties struct {
-	ApplicationID               string
-	Name                        string
-	IdentifierURL               string
-	ServicePrincipalCertificate x509.Certificate
-	ServicePrincipalPrivateKey  *rsa.PrivateKey
-	ServicePrincipalObjectID    string
+	ApplicationID                  string
+	Name                           string
+	IdentifierURL                  string
+	ServicePrincipalCertificatePem string
+	ServicePrincipalPrivateKeyPem  string
+	ServicePrincipalObjectID       string
 }
 
 type PkiKeyCertPair struct {
-	Certificate *x509.Certificate
-	PrivateKey  *rsa.PrivateKey
+	CertificatePem string
+	PrivateKeyPem  string
 }
 
 type PkiProperties struct {
@@ -42,7 +40,7 @@ type PkiProperties struct {
 }
 
 type SshProperties struct {
-	PrivateKey *rsa.PrivateKey
+	PrivateKeyPem string
 }
 
 type VaultProperties struct {
@@ -79,7 +77,7 @@ type Deployer struct {
 	DeploymentsClient resources.DeploymentsClient
 	GroupsClient      resources.GroupsClient
 	VaultClient       VaultClient
-	//AdClient          AdClient
+	AdClient          AdClient
 }
 
 type VaultTemplateInput struct {

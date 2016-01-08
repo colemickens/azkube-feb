@@ -23,7 +23,7 @@ func NewDeployVaultCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting deploy-vault command")
 
-			var state *util.State
+			state := &util.State{}
 			var err error
 			state, err = ReadAndValidateState(statePath,
 				[]reflect.Type{
@@ -36,6 +36,9 @@ func NewDeployVaultCmd() *cobra.Command {
 					reflect.TypeOf(state.Myriad),
 				},
 			)
+			if err != nil {
+				panic(err)
+			}
 
 			if vaultName == "" {
 				vaultName = state.Common.DeploymentName + "-vault"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"reflect"
 	"time"
@@ -23,6 +24,7 @@ func NewCreateCommonCmd() *cobra.Command {
 	var resourceGroup string
 	var subscriptionID string
 	var tenantID string
+	var masterIP string
 	var masterFQDN string
 
 	var createCommonCmd = &cobra.Command{
@@ -75,7 +77,12 @@ func NewCreateCommonCmd() *cobra.Command {
 				panic("subscriptionId and tenantId must be specified!")
 			}
 
-			state = RunCreateCommonCmd(state, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN)
+			masterIPparsed := net.ParseIP(masterIP)
+			if masterIPparsed == nil {
+				panic("master ip was invalid")
+			}
+
+			state = RunCreateCommonCmd(state, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN, masterIPparsed)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -95,11 +102,12 @@ func NewCreateCommonCmd() *cobra.Command {
 	createCommonCmd.Flags().StringVarP(&subscriptionID, "subscription-id", "i", "", "subscription id to deploy into")
 	createCommonCmd.Flags().StringVarP(&tenantID, "tenant-id", "t", "", "tenant id of account")
 	createCommonCmd.Flags().StringVarP(&masterFQDN, "master-fqdn", "m", "", "master fqdn (will use automatic cloudapp hostname otherwise) (NOTE: THIS AFFECTS CERT SUBJECT NAME)")
+	createCommonCmd.Flags().StringVarP(&masterIP, "master-ip", "p", "10.0.0.4", "master fqdn (will use automatic cloudapp hostname otherwise) (NOTE: THIS AFFECTS CERT SUBJECT NAME)")
 
 	return createCommonCmd
 }
 
-func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN string) (stateOut *util.State) {
+func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, location, subscriptionID, tenantID, masterFQDN string, masterIP net.IP) (stateOut *util.State) {
 	log.Println("made it here")
 
 	stateOut = &*stateIn
@@ -111,6 +119,7 @@ func RunCreateCommonCmd(stateIn *util.State, deploymentName, resourceGroup, loca
 		SubscriptionID: subscriptionID,
 		TenantID:       tenantID,
 		MasterFQDN:     masterFQDN,
+		MasterIP:       masterIP,
 	}
 
 	return stateOut

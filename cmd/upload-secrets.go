@@ -22,7 +22,7 @@ func NewUploadSecretsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Println("starting upload-secrets command")
 
-			var state *util.State
+			state := &util.State{}
 			var err error
 			state, err = ReadAndValidateState(
 				statePath,

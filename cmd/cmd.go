@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -48,6 +49,12 @@ func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stat
 	if err != nil {
 		return nil, err
 	}
+
+	_ = strings.Split
+
+	//buf := strings.NewReader(string(contents))
+	//decoder := json.NewDecoder(buf)
+	//err = decoder.Decode(&state)
 	err = json.Unmarshal(contents, &state)
 	if err != nil {
 		return nil, err
@@ -79,7 +86,7 @@ func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stat
 }
 
 func WriteState(path string, state *util.State) (err error) {
-	stateJson, err := json.Marshal(state)
+	stateJson, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return err
 	}

@@ -1,11 +1,8 @@
 package util
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"log"
 
 	"golang.org/x/crypto/ssh"
@@ -23,15 +20,23 @@ func GenerateSsh() (sshProperties *SshProperties, err error) {
 		return nil, err
 	}
 
+	privateKeyPem := PrivateKeyToPem(privateKey)
+
 	sshProperties = &SshProperties{
-		PrivateKey: privateKey,
+		PrivateKeyPem: string(privateKeyPem),
 	}
 
 	return sshProperties, nil
 }
 
 func (s *SshProperties) OpenSshPublicKey() (string, error) {
-	publicKey := s.PrivateKey.PublicKey
+	privateKey, err := PemToPrivateKey(s.PrivateKeyPem)
+	if err != nil {
+		return "", err
+	}
+
+	publicKey := privateKey.PublicKey
+
 	sshPublicKey, err := ssh.NewPublicKey(&publicKey)
 	if err != nil {
 		return "", err
@@ -39,15 +44,4 @@ func (s *SshProperties) OpenSshPublicKey() (string, error) {
 	authorizedKeyBytes := ssh.MarshalAuthorizedKey(sshPublicKey)
 	authorizedKey := string(authorizedKeyBytes)
 	return authorizedKey, nil
-}
-
-func (s *SshProperties) PrivateKeyPem() string {
-	pemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(s.PrivateKey),
-	}
-	pemBuffer := &bytes.Buffer{}
-	pem.Encode(pemBuffer, pemBlock)
-	pemString := string(pemBuffer.Bytes())
-	return pemString
 }

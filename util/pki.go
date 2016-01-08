@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"log"
 	"math/big"
 	"net"
 	"time"
@@ -18,44 +19,7 @@ const (
 // TODO(colemickens): could surely refactor/dedupe the two functions below, similar to x509's CreateCertificate
 // TODO(Colemickens): potential options, duration, alt subj names, etc
 
-func GeneratePki(common CommonProperties) (*PkiProperties, error) {
-	pki := &PkiProperties{}
-	var err error
-
-	pki.CA, err = createCertificateAuthority(common)
-	if err != nil {
-		return nil, err
-	}
-
-	pki.ApiServer, err = createCertificate(*pki.CA, "kube-apiserver", x509.ExtKeyUsageServerAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	pki.Kubelet, err = createCertificate(*pki.CA, "kube-kubelet", x509.ExtKeyUsageClientAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	pki.Kubeproxy, err = createCertificate(*pki.CA, "kube-kubeproxy", x509.ExtKeyUsageClientAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	pki.Scheduler, err = createCertificate(*pki.CA, "kube-scheduler", x509.ExtKeyUsageClientAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	pki.ReplicationController, err = createCertificate(*pki.CA, "kube-replication-controller", x509.ExtKeyUsageClientAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	return pki, nil
-}
-
-func createCertificateAuthority(common CommonProperties) (*PkiKeyCertPair, error) {
+func CreateCertificateAuthority(common CommonProperties) (*PkiKeyCertPair, error) {
 	var err error
 
 	now := time.Now()
@@ -74,7 +38,7 @@ func createCertificateAuthority(common CommonProperties) (*PkiKeyCertPair, error
 		IsCA: true,
 	}
 
-	snMax := new(big.Int).Lsh(big.NewInt(0), 128)
+	snMax := new(big.Int).Lsh(big.NewInt(1), 128)
 	template.SerialNumber, err = rand.Int(rand.Reader, snMax)
 	if err != nil {
 		return nil, err
@@ -82,21 +46,21 @@ func createCertificateAuthority(common CommonProperties) (*PkiKeyCertPair, error
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, PkiKeySize)
 
-	derCertificate, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	certDerBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	cert, err := x509.ParseCertificate(derCertificate)
-	if err != nil {
-		// this would be weird
-		return nil, err
-	}
+	certificatePem := CertificateToPem(certDerBytes)
+	privateKeyPem := PrivateKeyToPem(privateKey)
 
-	return &PkiKeyCertPair{Certificate: cert, PrivateKey: privateKey}, nil
+	return &PkiKeyCertPair{
+		CertificatePem: string(certificatePem),
+		PrivateKeyPem:  string(privateKeyPem),
+	}, nil
 }
 
-func createCertificate(ca PkiKeyCertPair, subjectName string, usage x509.ExtKeyUsage) (*PkiKeyCertPair, error) {
+func CreateCertificate(ca PkiKeyCertPair, subjectName string, usage x509.ExtKeyUsage) (*PkiKeyCertPair, error) {
 	var err error
 
 	now := time.Now()
@@ -111,7 +75,7 @@ func createCertificate(ca PkiKeyCertPair, subjectName string, usage x509.ExtKeyU
 		BasicConstraintsValid: true,
 	}
 
-	snMax := new(big.Int).Lsh(big.NewInt(0), 128)
+	snMax := new(big.Int).Lsh(big.NewInt(1), 128)
 	template.SerialNumber, err = rand.Int(rand.Reader, snMax)
 	if err != nil {
 		return nil, err
@@ -119,18 +83,25 @@ func createCertificate(ca PkiKeyCertPair, subjectName string, usage x509.ExtKeyU
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, PkiKeySize)
 
-	derCertificate, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, ca.PrivateKey)
+	caPrivateKey, err := PemToPrivateKey(ca.PrivateKeyPem)
 	if err != nil {
+		log.Println("!!!! 1")
 		return nil, err
 	}
 
-	cert, err := x509.ParseCertificate(derCertificate)
+	certDerBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, caPrivateKey)
 	if err != nil {
-		// this would be weird
+		log.Println("!!!! 2")
 		return nil, err
 	}
 
-	return &PkiKeyCertPair{Certificate: cert, PrivateKey: privateKey}, nil
+	certificatePem := CertificateToPem(certDerBytes)
+	privateKeyPem := PrivateKeyToPem(privateKey)
+
+	return &PkiKeyCertPair{
+		CertificatePem: string(certificatePem),
+		PrivateKeyPem:  string(privateKeyPem),
+	}, nil
 }
 
 func (pair *PkiKeyCertPair) Kubeconfig(common CommonProperties) {

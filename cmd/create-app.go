@@ -22,9 +22,9 @@ func NewCreateAppCmd() *cobra.Command {
 		Short: "creates active directory application to be used by Kubernetes itself",
 		Long:  createAppLongDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Println("starting create-config command")
+			log.Println("starting create-app command")
 
-			var state *util.State
+			state := &util.State{}
 			var err error
 			state, err = ReadAndValidateState(statePath,
 				[]reflect.Type{
@@ -32,8 +32,6 @@ func NewCreateAppCmd() *cobra.Command {
 				},
 				[]reflect.Type{
 					reflect.TypeOf(state.App),
-					reflect.TypeOf(state.Ssh),
-					reflect.TypeOf(state.Pki),
 					reflect.TypeOf(state.Vault),
 					reflect.TypeOf(state.Secrets),
 					reflect.TypeOf(state.Myriad),
@@ -51,10 +49,7 @@ func NewCreateAppCmd() *cobra.Command {
 				appIdentifierURL = "http://" + state.Common.DeploymentName + "/"
 			}
 
-			state, err = RunCreateAppCmd(state, appName, appIdentifierURL)
-			if err != nil {
-				panic(err)
-			}
+			RunCreateAppCmd(state, appName, appIdentifierURL)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -72,14 +67,21 @@ func NewCreateAppCmd() *cobra.Command {
 	return createAppCmd
 }
 
-func RunCreateAppCmd(stateIn *util.State, appName, appURL string) (stateOut *util.State, err error) {
-	*stateOut = *stateIn // copy inputs
+func RunCreateAppCmd(state *util.State, appName, appURL string) {
+	// really? one line?
 
-	stateOut.App = &util.AppProperties{
-	// make copy of inputs or something for now?
-	// hard code these?
-	// make it load from a file and pretend it actually went out and made it ?
+	d, err := util.NewDeployerWithToken(
+		state.Common.SubscriptionID,
+		state.Common.TenantID,
+		"http://azkube",                                // client id
+		"fk17GvW4GYj7Ju1g/sUGB4Jr39HQ+hiBW3VXTHRvnRE=") // client secret
+
+	if err != nil {
+		panic(err)
 	}
 
-	panic("you must do this yourself for now")
+	state.App, err = d.AdClient.CreateApp(*state.Common, appName, appURL)
+	if err != nil {
+		panic(err)
+	}
 }

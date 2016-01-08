@@ -6,7 +6,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
-	"encoding/pem"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -19,12 +20,11 @@ import (
 )
 
 const (
-	AzureActiveDirectoryScope = "https://graph.windows.net/"
-	//AzureActiveDirectoryApiVersion = "1.6"
-	AzureActiveDirectoryApiVersion = "1.5"
-	//AzureActiveDirectoryApiVersion        = "1.42-previewInternal"
+	AzureActiveDirectoryScope      = "https://graph.windows.net/"
+	AzureActiveDirectoryApiVersion = "1.6"
+	AzureActiveDirectoryBaseURL    = "https://graph.windows.net/{tenant-id}"
+
 	AzureRoleManagementApiVersion         = "2015-07-01"
-	AzureActiveDirectoryBaseURL           = "https://graph.windows.net/{tenant-id}"
 	AzureManagementBaseURL                = "https://management.azure.net/{tenant-id}"
 	AzureActiveDirectoryContributorRoleId = "b24988ac-6180-42a0-ab88-20f7382dd24c"
 
@@ -69,32 +69,33 @@ type AdRoleAssignment struct {
 }
 
 func (app *AppProperties) ServicePrincipalPkcs12() ([]byte, error) {
-	pfxData, err := pkcs12.Encode(app.ServicePrincipalPrivateKey, &app.ServicePrincipalCertificate, nil, "")
+	privateKey, err := PemToPrivateKey(app.ServicePrincipalPrivateKeyPem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse pem into private key")
+	}
+
+	certificate, err := PemToCertificate(app.ServicePrincipalCertificatePem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse pem into certificate")
+	}
+
+	pfxData, err := pkcs12.Encode(privateKey, certificate, nil, "")
 	if err != nil {
 		return nil, err
 	}
 	return pfxData, nil
 }
 
-func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*AppProperties, error) {
-	app := &AppProperties{}
-
-	notBefore := time.Now()
-	notAfter := time.Now().Add(5 * 365 * 24 * time.Hour)
-	notAfter = time.Now().Add(10000 * 24 * time.Hour)
-
-	// create the service principal's private key
-	privateKey, err := rsa.GenerateKey(rand.Reader, ServicePrincipalKeySize)
+func CreateServicePrincipalSecrets(notBefore, notAfter time.Time) (certDerBytes []byte, privateKey *rsa.PrivateKey, err error) {
+	privateKey, err = rsa.GenerateKey(rand.Reader, ServicePrincipalKeySize)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	app.ServicePrincipalPrivateKey = privateKey // convert to PkiKeyCertPair
 
-	// create the cert and store it in state
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	certTemplate := x509.Certificate{
 		SerialNumber: serialNumber,
@@ -108,22 +109,36 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
-	certificateDer, err := x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, &privateKey.PublicKey, privateKey)
-	if err != nil {
-		return nil, err
-	}
-	certificate, err := x509.ParseCertificate(certificateDer)
-	if err != nil {
-		return nil, err
-	}
-	app.ServicePrincipalCertificate = *certificate
-	certificatePemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificateDer})
-	certificatePem := string(certificatePemBytes)
-	parts := strings.Split(certificatePem, "\n")
-	certificatePem = strings.Join(parts[1:len(parts)-2], "")   // 500
-	certificatePem = strings.Join(parts[1:len(parts)-2], "\n") // 500
-	certificatePemBytes, _ = json.Marshal(certificatePem)
 
+	certDerBytes, err = x509.CreateCertificate(rand.Reader, &certTemplate, &certTemplate, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return certDerBytes, privateKey, nil
+}
+
+func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*AppProperties, error) {
+	app := &AppProperties{}
+
+	app.Name = appName
+	app.IdentifierURL = appURL
+
+	notBefore := time.Now()
+	notAfter := time.Now().Add(5 * 365 * 24 * time.Hour)
+	notAfter = time.Now().Add(10000 * 24 * time.Hour)
+
+	cert, privateKey, err := CreateServicePrincipalSecrets(notBefore, notAfter)
+	if err != nil {
+		return nil, err
+	}
+	privateKeyPem := PrivateKeyToPem(privateKey)
+	certificatePem := CertificateToPem(cert)
+
+	app.ServicePrincipalPrivateKeyPem = string(privateKeyPem)
+	app.ServicePrincipalCertificatePem = string(certificatePem)
+
+	////////////////////////////////////////////////////////////////////////////////////
 	// create application
 	applicationReq := AdApplication{
 		AvailableToOtherTenants: false,
@@ -137,7 +152,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 				Usage:     "Verify",
 				StartDate: notBefore.Format(time.RFC3339),
 				EndDate:   notAfter.Format(time.RFC3339),
-				Value:     string(certificatePemBytes),
+				Value:     app.ServicePrincipalCertificatePem,
 			},
 		},
 	}
@@ -145,11 +160,17 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	p := map[string]interface{}{"tenant-id": common.TenantID}
 	q := map[string]interface{}{"api-version": AzureActiveDirectoryApiVersion}
 
-	forceItIn := `{"availableToOtherTenants":false,"displayName":"test01113","homepage":"http://test000113","identifierUris":["http://test000113"],"keyCredentials":[{"startDate":"2015-12-18T08:25:21.694Z","endDate":"2043-05-05T08:02:54.000Z","value":"MIIDBDCCAeygAwIBAgIRAMVbOzlLG6kqcxqSBJNcHlowDQYJKoZIhvcNAQELBQAw\nIjEPMA0GA1UEChMGQXprdWJlMQ8wDQYDVQQDEwZBemt1YmUwHhcNMTUxMjE4MDgx\nODMxWhcNNDMwNTA1MDgxODMxWjAiMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMT\nBkF6a3ViZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKvd96W+mUO8\nNKbexxKLmrkOLVixzroDiDew3uIT94miwvDcnNCx79XXPOl57cyPwj8Hs5z47gqY\nuwlUayVSCLl81ixog3k0mwAh03O1W3pwdafpCC6qOOPKY4daEjS4raGj8pPvpEto\n2Tv5jGTpuKAeqmw/G0t3cGSs9ruOBO0WEtzd6of0zXTLEtt6SnKbeLrrU25g6qBg\nSPSPPtT88zNjhwA0q1FwSOEpbTjnWw1Ujw6RAk4xF+2wImeYAkwcix50zWAErLkb\ndrWszoEaX1H4mlhb80TOnnksfoQctDVfnS8IUxDIri9Dy15APKyoRG45l+ni6dS+\nDmc4Uv/VP9UCAwEAAaM1MDMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsG\nAQUFBwMBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggEBAIiuwS/ZkUiQ\ncgakyVLnzb/egvhlSB+ol72IyKiKa4PzgsX+JxhHC5+5p2g8IY5o3mfK2GxkiA23\nOdwxJDGepJuQrU3Aue2DC8U7PdCH/PweF+TWXU2DeyYp/8fhzD12gIS8TmJfgozM\nYiMaf9dyKFU/GrbosfjNS6GUrhbeZYKF3EfqwEe8Igv4JqQvQWpxxv8ckyisdBlq\nTw/GY8XWAfOnhYwVU0q1zS3aQpKahwIZBGqDNulXBHgRs2261UykSIUXyVc5Uawv\nx7uVdZgLjCfhR1XuBiBuTwyWb5xkbkP/lJLrl06UmJbuwcj1+pyXfnevCDbfnPNO\nGFtPzdmktNw=","keyId":"9dfcaeb7-3367-4387-ab92-52da1a789560","usage":"Verify","type":"AsymmetricX509Cert"}]}`
+	// forceItIn := `{"availableToOtherTenants":false,"displayName":"test01113","homepage":"http://test000113","identifierUris":["http://test000113"],"keyCredentials":[{"startDate":"2015-12-18T08:25:21.694Z","endDate":"2043-05-05T08:02:54.000Z","value":"MIIDBDCCAeygAwIBAgIRAMVbOzlLG6kqcxqSBJNcHlowDQYJKoZIhvcNAQELBQAw\nIjEPMA0GA1UEChMGQXprdWJlMQ8wDQYDVQQDEwZBemt1YmUwHhcNMTUxMjE4MDgx\nODMxWhcNNDMwNTA1MDgxODMxWjAiMQ8wDQYDVQQKEwZBemt1YmUxDzANBgNVBAMT\nBkF6a3ViZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKvd96W+mUO8\nNKbexxKLmrkOLVixzroDiDew3uIT94miwvDcnNCx79XXPOl57cyPwj8Hs5z47gqY\nuwlUayVSCLl81ixog3k0mwAh03O1W3pwdafpCC6qOOPKY4daEjS4raGj8pPvpEto\n2Tv5jGTpuKAeqmw/G0t3cGSs9ruOBO0WEtzd6of0zXTLEtt6SnKbeLrrU25g6qBg\nSPSPPtT88zNjhwA0q1FwSOEpbTjnWw1Ujw6RAk4xF+2wImeYAkwcix50zWAErLkb\ndrWszoEaX1H4mlhb80TOnnksfoQctDVfnS8IUxDIri9Dy15APKyoRG45l+ni6dS+\nDmc4Uv/VP9UCAwEAAaM1MDMwDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQMMAoGCCsG\nAQUFBwMBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggEBAIiuwS/ZkUiQ\ncgakyVLnzb/egvhlSB+ol72IyKiKa4PzgsX+JxhHC5+5p2g8IY5o3mfK2GxkiA23\nOdwxJDGepJuQrU3Aue2DC8U7PdCH/PweF+TWXU2DeyYp/8fhzD12gIS8TmJfgozM\nYiMaf9dyKFU/GrbosfjNS6GUrhbeZYKF3EfqwEe8Igv4JqQvQWpxxv8ckyisdBlq\nTw/GY8XWAfOnhYwVU0q1zS3aQpKahwIZBGqDNulXBHgRs2261UykSIUXyVc5Uawv\nx7uVdZgLjCfhR1XuBiBuTwyWb5xkbkP/lJLrl06UmJbuwcj1+pyXfnevCDbfnPNO\nGFtPzdmktNw=","keyId":"9dfcaeb7-3367-4387-ab92-52da1a789560","usage":"Verify","type":"AsymmetricX509Cert"}]}`
 
-	var blahf map[string]interface{}
-	json.Unmarshal([]byte(forceItIn), &blahf)
-	_ = applicationReq
+	// var blahf map[string]interface{}
+	// json.Unmarshal([]byte(forceItIn), &blahf)
+	// _ = applicationReq
+	// applicationReq = blahf
+
+	_ = json.Marshal // TODO(colemickens): remove this
+
+	appReqStr, _ := json.MarshalIndent(applicationReq, "", "  ")
+	ioutil.WriteFile("./request.txt", appReqStr, 0666)
 
 	req, err := autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
@@ -158,7 +179,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 		autorest.WithPath("applications"),
 		autorest.WithPathParameters(p),
 		autorest.WithQueryParameters(q),
-		autorest.WithJSON(blahf))
+		autorest.WithJSON(applicationReq))
 
 	log.Println(req)
 
@@ -182,6 +203,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 	log.Println("sleep 10")
 	time.Sleep(10 * time.Second)
 
+	////////////////////////////////////////////////////////////////////////////////////
 	// create service principal
 	servicePrincipalReq := AdServicePrincipal{
 		ApplicationID:         app.ApplicationID,

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing">
+  <s:Header>
+    <a:Action s:mustUnderstand="1">http://provisioning.microsoftonline.com/IProvisioningWebService/AddRoleMembers</a:Action>
+    <a:MessageID>urn:uuid:6a81c201-e320-4478-a0aa-4d631d42cc94</a:MessageID>
+    <a:ReplyTo>
+      <a:Address>http://www.w3.org/2005/08/addressing/anonymous</a:Address>
+    </a:ReplyTo>
+    <UserIdentityHeader xmlns="http://provisioning.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <BearerToken xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService" i:nil="true"/>
+      <LiveToken xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">t=EwAoAxYcBAAUi5rJ71NS7UltJx13SKu7ai+g25MAAWT9iUAVlh9Y0zgxQ0V/lXHCoCSyohlAW4c0tDg9mFSv1u4IrN6JPxtPQGYx7g91b38wy0wOm9Jy24C/hn6GjJMrgrf7weu7zCltF35zJCYrHn/BaCkqlIWh2Q6x48eI8/S/mj8Uv0FgTkSqPcwnG4oRQt0J1oeL2l6VdV/XpG65q04CyIYoNB/othisisabunchofgibberish/3AlF8hcoPvlzJSmHKjpM9sv/ESP03wF8io99l0onbtn46jQdd4wxtIlBIH+TgnQjWkud4WFQEaSsmC6T6Vx53OhIvY3DVQ91rWj/2h465VD6FU3LFfm1NY36M5BsqwxQNmfGUD6uT/1fvlMJQsiADCEIhHBozGXkZMUm/434VARtA3R53XJQImMBRdZBjZ/Dx95/zo9WtdHqMRCrF4PC4zDF6PI5NLSo2cosNHRsxIoP16kDnvRJv5t2s3p3uQyCOLswENOENPRRG21nvX7ui3NPqVOiHEEhPdqvIqFtZ8uvYJbv7o1FN+IWjQ9haIdaSiP+vnNzY8nl3UzeW4qdeqsA3OOi5RtfOWwmP5+MwXtSBdFXacWV80FZsLQKVvTBmn27Pu/OPIESj6OZhULcCoU6pONFbn1soxCieZycQpkVWEgrc5gSHFNwhQKNlcPPhghR67YPcavLt0nnYfabc8uV8wVD47roWZ4kyrNuO3vIWjORzBpzf4HrgpxlYbR8J/Y/60Jkduzi26uHlD8joKHS9YJsnvaDtLExTOS0OpYQ5rve0OuljY8X8Ht3doszjvIeclMOHRsczLlJj7EWt/rGnU6yeBFE4pa39rgB8a5pva94hsOHMeK/aauo23VRqym6VYU34o61qDDzqYF7yKTB4kV/HYD7Dh4Ag==&amp;p=</LiveToken>
+    </UserIdentityHeader>
+    <BecContext xmlns="http://becwebservice.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <DataBlob xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">AAAAAQAAAAAEEGiA2yjQd8hDt7bHKBd5pSsGCWCGSAFlAwQCAQYJYIZIAWUDBAIBBglghkgBZQMEAQIEIDxkI19rHFCd0LyHo/sqf02Z/ByuexpphU6zpjrPrxoSBBC+btrdc/x2AkdBwgQwIY3kIIICMLlLK4gUuNp2iIBXjE1eMb1SV8a4aymElI5/c/L3IruN2t27lTA2jqpMxYQ8u389/7trnsjAnccPMDNHk3cbn2LxrvxspnTrcUL+Fu3h2T9zmdC3mhYZqD1IaZCJ9V7+t1KyUdRwQuw9jqSZTBH+4fBgz4FGvzz1+GAzoHBCPUZrnPfaMK0Tu+v+23BY+tjWKaZ/3AdPPHjm75/Lv6/2EUWKS9Yr0qyJnZVIbWurBgOhEFo0ZsgyJSLCZ60G9xqNyiJO+TVJ/DCyjIgIimUpmdTmofxIOgci1SmLBvv63SkWq3gGolzYXYSV8I4qArEVk3JjWwpSj3sYFkidAh1WN8X+RYZxUuAMQakPlj5POYySVpfBa60EW0ZwPTEmdpSO0v1nDhJvAzX0vKw0XDHYhsztimADTLPOIFsMMcrLFMDiOCepyuRDFvH3MKL9qpd+7q0JpCCf1CWuM2/XdlOvByUWQwbWeZbi+sJTCSyM0KX/RgKXK8VEdLWfW/F/ysZcrkSlkoRB1Nje7IElYpWW+weFh65v0ijC4j4BieG9tJDmAFS9J</DataBlob>
+    </BecContext>
+    <ClientVersionHeader xmlns="http://provisioning.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <ClientId xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">50afce61-c917-435b-8c6d-60aa5a8b8aa7</ClientId>
+      <Version xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">1.1.8362.1</Version>
+    </ClientVersionHeader>
+    <ContractVersionHeader xmlns="http://becwebservice.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <BecVersion xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">Version25</BecVersion>
+    </ContractVersionHeader>
+    <TrackingHeader xmlns="http://becwebservice.microsoftonline.com/">887129a0-e775-466f-a22c-4bd9c2633138</TrackingHeader>
+    <a:To s:mustUnderstand="1">https://provisioningapi.microsoftonline.com/provisioningwebservice.svc</a:To>
+  </s:Header>
+  <s:Body>
+    <AddRoleMembers xmlns="http://provisioning.microsoftonline.com/">
+      <request xmlns:b="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <b:BecVersion>Version16</b:BecVersion>
+        <b:TenantId i:nil="true"/>
+        <b:VerifiedDomain i:nil="true"/>
+        <b:RoleMembers xmlns:c="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration">
+          <c:RoleMember>
+            <c:DisplayName i:nil="true"/>
+            <c:EmailAddress i:nil="true"/>
+            <c:IsLicensed i:nil="true"/>
+            <c:LastDirSyncTime i:nil="true"/>
+            <c:ObjectId>d785237f-f53e-47c7-bc8f-849323b2b365</c:ObjectId>
+            <c:OverallProvisioningStatus i:nil="true"/>
+            <c:RoleMemberType>ServicePrincipal</c:RoleMemberType>
+            <c:StrongAuthenticationRequirements i:nil="true"/>
+            <c:ValidationStatus i:nil="true"/>
+          </c:RoleMember>
+        </b:RoleMembers>
+        <b:RoleObjectId>62e90394-69f5-4237-9190-012177145e10</b:RoleObjectId>
+      </request>
+    </AddRoleMembers>
+  </s:Body>
+</s:Envelope>
