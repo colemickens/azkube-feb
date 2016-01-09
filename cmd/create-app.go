@@ -64,6 +64,11 @@ func NewCreateAppCmd() *cobra.Command {
 	createAppCmd.Flags().StringVarP(&appName, "name", "n", "", "name of the app")
 	createAppCmd.Flags().StringVarP(&appIdentifierURL, "identifier-url", "i", "", "identifier-url for the app")
 
+	// need lots of ways of getting creds down into here
+	// - interactive
+	// - cert
+	// - client secret
+
 	return createAppCmd
 }
 

@@ -57,7 +57,7 @@ func NewUploadSecretsCmd() *cobra.Command {
 }
 
 func RunUploadSecretsCmd(state *util.State) {
-	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e")
+	d, err := util.NewDeployerFromState(*state)
 	if err != nil {
 		panic(err)
 	}

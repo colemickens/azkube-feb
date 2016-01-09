@@ -63,7 +63,7 @@ func NewDeployVaultCmd() *cobra.Command {
 
 // TODO: should these get a copy of state and return just their subelement?
 func RunDeployVaultCmd(state *util.State, vaultName string) {
-	d, err := util.NewDeployerWithCertificate("a", "b", "c", "d", "e") // TODO (Colemickens): obviously
+	d, err := util.NewDeployerFromState(*state)
 	if err != nil {
 		panic(err)
 	}

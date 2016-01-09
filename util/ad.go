@@ -30,6 +30,8 @@ const (
 	AzureAdContributorRoleId     = "b24988ac-6180-42a0-ab88-20f7382dd24c"
 
 	ServicePrincipalKeySize = 4096
+
+	AzurePropagationWaitDelay = time.Second * 30 // TODO(Colemickens): poll instead of dumb sleep
 )
 
 type AdClient struct {
@@ -195,8 +197,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 
 	app.ApplicationID = applicationResp.ApplicationID
 
-	log.Println("sleep 10")
-	time.Sleep(10 * time.Second)
+	time.Sleep(AzurePropagationWaitDelay)
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// create service principal
@@ -231,8 +232,7 @@ func (a *AdClient) CreateApp(common CommonProperties, appName, appURL string) (*
 
 	app.ServicePrincipalObjectID = servicePrincipalResp.ObjectID
 
-	log.Println("sleep 10")
-	time.Sleep(10 * time.Second)
+	time.Sleep(AzurePropagationWaitDelay)
 
 	return app, nil
 }

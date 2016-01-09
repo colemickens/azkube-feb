@@ -3,11 +3,13 @@
 	"contentVersion": "1.0.0.0",
 	"variables": {
 		"vaultName": "{{.VaultName}}",
-		"tenantId": "{{.TenantId}}",
-		"servicePrincipalObjectId": "{{.ServicePrincipalObjectId}}"
+		"tenantId": "{{.TenantID}}",
+		"servicePrincipalObjectId": "{{.ServicePrincipalObjectID}}"
 	},
 	"resources": [
 		{
+			"type": "Microsoft.KeyVault/vaults",
+			"name": "[variables('vaultName')]",
 			"apiVersion": "2015-06-01",
 			"location": "[resourceGroup().location]",
 			"properties": {

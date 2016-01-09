@@ -22,6 +22,29 @@ func NewDeployerWithToken(subscriptionID, tenantID, clientID, clientSecret strin
 	return newDeployer(subscriptionID, tenantID, clientID, secret)
 }
 
+func NewDeployerFromState(state State) (deployer *Deployer, err error) {
+	certificate, err := PemToCertificate(state.App.ServicePrincipalCertificatePem)
+	if err != nil {
+		panic(err)
+	}
+
+	privateKey, err := PemToPrivateKey(state.App.ServicePrincipalPrivateKeyPem)
+	if err != nil {
+		panic(err)
+	}
+
+	secret := &azure.ServicePrincipalCertificateSecret{
+		Certificate: certificate,
+		PrivateKey:  privateKey,
+	}
+
+	return newDeployer(
+		state.Common.SubscriptionID,
+		state.Common.TenantID,
+		state.App.IdentifierURL,
+		secret)
+}
+
 func NewDeployerWithCertificate(subscriptionID, tenantID, appURL, certPath, keyPath string) (deployer *Deployer, err error) {
 	certificateData, err := ioutil.ReadFile(certPath)
 	if err != nil {
