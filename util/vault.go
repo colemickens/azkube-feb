@@ -11,7 +11,7 @@ import (
 
 const (
 	AzureVaultApiVersion     = "2015-06-01"
-	AzureVaultScope          = "https://vault.azure.net/"
+	AzureVaultScope          = "https://vault.azure.net"
 	AzureVaultSecretTemplate = "https://{vault-name}.vault.azure.net/{secret-name}/{secret-version}"
 )
 
@@ -20,29 +20,56 @@ type VaultClient struct {
 }
 
 type Secret struct {
-	ID    string `json:"id"`
-	Value string `json:"value"`
+	ID         *string          `json:"id,omitempty"`
+	Value      string           `json:"value"`
+	Attributes SecretAttributes `json:"attributes"`
 }
 
-func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secretURL string, err error) {
+type SecretAttributes struct {
+	Enabled   bool    `json:"enabled"`
+	NotBefore *string `json:"nbf"`
+	Expires   *string `json:"exp"`
+}
+
+func (v *VaultClient) PutSecret(vaultName, secretName, secretValue string) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
 	pathParams := map[string]interface{}{
 		"secret-id": secretID,
 	}
 
+	q := map[string]interface{}{
+		"api-version": AzureVaultApiVersion,
+	}
+
 	var result struct {
-		Id string `json:"id"`
+		ID string `json:"id"`
+	}
+
+	secretValue64 := base64.URLEncoding.EncodeToString([]byte(secretValue))
+
+	secret := Secret{
+		//ID:    secretID,
+		Value: secretValue64,
+		Attributes: SecretAttributes{
+			Enabled:   true,
+			NotBefore: nil,
+			Expires:   nil,
+		},
 	}
 
 	baseURL := strings.Replace(AzureVaultSecretTemplate, "{vault-name}", vaultName, 1)
 
-	req, err := autorest.Prepare(&http.Request{},
+	req, err := autorest.Prepare(
+		&http.Request{},
 		autorest.AsJSON(),
-		autorest.AsPost(),
+		autorest.AsPut(),
 		autorest.WithBaseURL(baseURL),
 		autorest.WithPath("/secrets/{secret-id}"),
-		autorest.WithPathParameters(pathParams))
+		autorest.WithPathParameters(pathParams),
+		autorest.WithQueryParameters(q),
+		autorest.WithJSON(secret),
+	)
 
 	if err != nil {
 		return "", err
@@ -64,7 +91,7 @@ func (v *VaultClient) PutSecret(vaultName, secretName, secretPath string) (secre
 	}
 
 	log.Println("!!!! need to check output to find secret url")
-	log.Println("secret id:", result.Id)
+	log.Println("secret id:", result.ID)
 
 	return "", nil
 }
@@ -104,7 +131,7 @@ func (v *VaultClient) GetSecret(vaultName, secretName string) (*string, error) {
 		return nil, err
 	}
 
-	secretValue, err := base64.StdEncoding.DecodeString(secret.Value)
+	secretValue, err := base64.URLEncoding.DecodeString(secret.Value)
 	if err != nil {
 		return nil, err
 	}

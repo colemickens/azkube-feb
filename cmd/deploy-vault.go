@@ -3,6 +3,7 @@ package cmd
 import (
 	"log"
 	"reflect"
+	"strings"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ const (
 func NewDeployVaultCmd() *cobra.Command {
 	var statePath string
 	var vaultName string
+	var waitDns bool
 
 	var deployVaultCmd = &cobra.Command{
 		Use:   "deploy-vault",
@@ -42,9 +44,10 @@ func NewDeployVaultCmd() *cobra.Command {
 
 			if vaultName == "" {
 				vaultName = state.Common.DeploymentName + "-vault"
+				vaultName = strings.Replace(vaultName, "-", "", -1)
 			}
 
-			RunDeployVaultCmd(state, vaultName)
+			RunDeployVaultCmd(state, vaultName, waitDns)
 
 			err = WriteState(statePath, state)
 			if err != nil {
@@ -56,13 +59,14 @@ func NewDeployVaultCmd() *cobra.Command {
 	}
 
 	deployVaultCmd.Flags().StringVarP(&statePath, "state", "s", "./state.json", "path to load state from, and to persist state into")
-	deployVaultCmd.Flags().StringVarP(&vaultName, "vaultName", "v", "", "vault name (will be derived from deployment name if empty")
+	deployVaultCmd.Flags().StringVarP(&vaultName, "vault-name", "v", "", "vault name (will be derived from deployment name if empty")
+	deployVaultCmd.Flags().BoolVarP(&waitDns, "wait-dns", "w", true, "wait for vault dns to resolve before considering step complete")
 
 	return deployVaultCmd
 }
 
 // TODO: should these get a copy of state and return just their subelement?
-func RunDeployVaultCmd(state *util.State, vaultName string) {
+func RunDeployVaultCmd(state *util.State, vaultName string, waitDns bool) {
 	d, err := util.NewDeployerFromState(*state)
 	if err != nil {
 		panic(err)
@@ -84,4 +88,7 @@ func RunDeployVaultCmd(state *util.State, vaultName string) {
 	state.Vault = &util.VaultProperties{
 		Name: vaultName,
 	}
+
+	// looop until dns resolves
+
 }

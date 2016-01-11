@@ -21,8 +21,8 @@
 						"tenantId": "[variables('tenantId')]",
 						"objectId": "[variables('servicePrincipalObjectId')]",
 						"permissions": {
-							"keys": "all",
-							"secrets": "all"
+							"keys": [ "all" ],
+							"secrets": [ "all" ]
 						}
 					}
 				],

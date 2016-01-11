@@ -85,7 +85,11 @@ func RunUploadSecretsCmd(state *util.State) {
 	}
 
 	for secretPath, secretName := range secrets {
-		_, err = d.VaultClient.PutSecret(state.Vault.Name, secretName, secretPath)
+		secretValue, err := ioutil.ReadFile(secretPath)
+		if err != nil {
+			panic(err)
+		}
+		_, err = d.VaultClient.PutSecret(state.Vault.Name, secretName, secretValue)
 		if err != nil {
 			panic(err)
 		}

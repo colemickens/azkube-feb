@@ -41,7 +41,8 @@ func NewDeployerFromState(state State) (deployer *Deployer, err error) {
 	return newDeployer(
 		state.Common.SubscriptionID,
 		state.Common.TenantID,
-		state.App.IdentifierURL,
+		//		state.App.IdentifierURL,
+		state.App.ApplicationID,
 		secret)
 }
 

@@ -28,6 +28,8 @@ const (
 
 	AzureAdRoleReferenceTemplate = "/subscriptions/{subscription-id}/providers/Microsoft.Authorization/roleDefinitions/{role-definition-id}"
 	AzureAdContributorRoleId     = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+	AzureAdOwnerRoleId           = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+	AzureAdAssignedRoleId        = AzureAdOwnerRoleId
 
 	ServicePrincipalKeySize = 4096
 
@@ -241,7 +243,7 @@ func (d *Deployer) CreateRoleAssignment(common CommonProperties, principalID str
 	roleAssignmentName := uuid.New()
 
 	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", common.SubscriptionID, -1)
-	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureAdContributorRoleId, -1)
+	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureAdAssignedRoleId, -1)
 
 	scope := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", common.SubscriptionID, common.ResourceGroup)
 
