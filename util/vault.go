@@ -31,7 +31,19 @@ type SecretAttributes struct {
 	Expires   *string `json:"exp"`
 }
 
-func (v *VaultClient) PutSecret(vaultName, secretName, secretValue string) (secretURL string, err error) {
+///
+
+type StashedSecret struct {
+	KeyVaultID  string
+	Destination string
+	Value       []byte
+}
+
+var SecretDefintions []StashedSecret
+
+///
+
+func (v *VaultClient) PutSecret(vaultName, secretName string, secretValue []byte) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
 	pathParams := map[string]interface{}{
@@ -46,7 +58,7 @@ func (v *VaultClient) PutSecret(vaultName, secretName, secretValue string) (secr
 		ID string `json:"id"`
 	}
 
-	secretValue64 := base64.URLEncoding.EncodeToString([]byte(secretValue))
+	secretValue64 := base64.URLEncoding.EncodeToString(secretValue)
 
 	secret := Secret{
 		//ID:    secretID,

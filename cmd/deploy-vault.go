@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -90,5 +93,19 @@ func RunDeployVaultCmd(state *util.State, vaultName string, waitDns bool) {
 	}
 
 	// looop until dns resolves
+	if waitDns {
+		for {
+			vaultHostname := fmt.Sprintf("%s.vault.azure.net", vaultName)
+			log.Println("waiting for vault dns to resolve: ", vaultHostname)
 
+			ip, err := net.ResolveIPAddr("ip4", vaultHostname)
+			if err != nil {
+				log.Println("resolve err:", err)
+			} else if ip != nil {
+				break
+			}
+
+			time.Sleep(time.Second * 30)
+		}
+	}
 }

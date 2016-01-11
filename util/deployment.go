@@ -8,7 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 )
 
-func (d *Deployer) DoDeployment(commonProperties CommonProperties, name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
+func (d *Deployer) DoDeployment(common CommonProperties, name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
 	deployment := resources.Deployment{
 		Properties: &resources.DeploymentProperties{
 			Template: &template,
@@ -17,8 +17,8 @@ func (d *Deployer) DoDeployment(commonProperties CommonProperties, name string, 
 	}
 
 	deploymentResponse, err := d.DeploymentsClient.CreateOrUpdate(
-		commonProperties.ResourceGroup,
-		commonProperties.ResourceGroup+"-"+name+"-deploy",
+		common.ResourceGroup,
+		common.ResourceGroup+"-"+name+"-deploy",
 		deployment)
 	if err != nil {
 		panic(err)
@@ -28,18 +28,18 @@ func (d *Deployer) DoDeployment(commonProperties CommonProperties, name string, 
 		// TODO(colemickens): assert this name is the same?
 		// here we use the returned deploymentName but in groups we use original resGroup name?
 		deploymentName := *deploymentResponse.Name
-		response, err = d.WaitDeployment(deploymentName)
+		response, err = d.WaitDeployment(common.ResourceGroup, deploymentName)
 		return response, err
 	}
 
 	return &deploymentResponse, err
 }
 
-func (d *Deployer) WaitDeployment(deploymentName string) (*resources.DeploymentExtended, error) {
+func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resources.DeploymentExtended, error) {
 	var err error
 	var response resources.DeploymentExtended
 	for {
-		response, err = d.DeploymentsClient.Get(deploymentName, deploymentName)
+		response, err = d.DeploymentsClient.Get(resourceGroup, deploymentName)
 		if err != nil {
 			return &response, err
 		}

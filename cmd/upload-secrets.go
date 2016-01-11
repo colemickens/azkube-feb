@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io/ioutil"
 	"log"
 	"reflect"
 
@@ -75,10 +76,15 @@ func RunUploadSecretsCmd(state *util.State) {
 		"pki/master-controller-manager-kubeconfig": "master-controller-manager-kubeconfig",
 	}
 
+	// upload the PFX in the special format that KV requires for this secret
+	pfxBytes, err := state.App.ServicePrincipalPkcs12()
+	if err != nil {
+		panic(err)
+	}
 	servicePrincipalSecretURL, err := d.VaultClient.PutSecret(
 		state.Vault.Name,
 		"servicePrincipal-pfx",
-		"pki/servicePrincipal.pfx",
+		pfxBytes,
 	)
 	if err != nil {
 		panic(err)
