@@ -94,6 +94,7 @@ func RunDeployVaultCmd(state *util.State, vaultName string, waitDns bool) {
 
 	// looop until dns resolves
 	if waitDns {
+		before := time.Now()
 		for {
 			vaultHostname := fmt.Sprintf("%s.vault.azure.net", vaultName)
 			log.Println("waiting for vault dns to resolve: ", vaultHostname)
@@ -107,5 +108,8 @@ func RunDeployVaultCmd(state *util.State, vaultName string, waitDns bool) {
 
 			time.Sleep(time.Second * 30)
 		}
+		dnsResolutionDuration := time.Since(before)
+
+		log.Printf("DNS Resolved. Waited for %v minutes\n", dnsResolutionDuration.Minutes)
 	}
 }
