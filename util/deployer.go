@@ -41,8 +41,7 @@ func NewDeployerFromState(state State) (deployer *Deployer, err error) {
 	return newDeployer(
 		state.Common.SubscriptionID,
 		state.Common.TenantID,
-		//		state.App.IdentifierURL,
-		state.App.ApplicationID,
+		state.App.IdentifierURL,
 		secret)
 }
 
@@ -86,6 +85,7 @@ func withSecret(tenantID, clientID, scope string, secret azure.ServicePrincipalS
 		return nil, err
 	}
 
+	log.Println("refreshing token for", scope)
 	err = spt.Refresh()
 	if err != nil {
 		return nil, err
