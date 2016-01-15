@@ -6,12 +6,8 @@ import:
   - /arm/resources/resources
 - package: github.com/spf13/cobra
   version: 9c9300901990faada0c5fb3b5730f452585c7c2b
-- package: code.google.com/p/go-uuid
-  vcs: git
-  repo: https://github.com/pborman/uuid
+- package: github.com/pborman/uuid
   version: dee7705ef7b324f27ceb85a121c61f2c2e8ce988
-  subpackages:
-  - /uuid
 - package: golang.org/x/crypto
   vcs: git
   repo: https://github.com/colemickens/crypto

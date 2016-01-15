@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/azure-sdk-for-go/arm/authorization"
+	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pkcs12"
 )
 
