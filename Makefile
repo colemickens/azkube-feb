@@ -1,5 +1,10 @@
 .NOTPARALLEL:
 
+subscriptionId := "aff271ee-e9be-4441-b9bb-42f5af4cbaeb"
+tenantId := "13de0a15-b5db-44b9-b682-b4ba82afbd29"
+clientId := "20f97fda-60b5-4557-9100-947b9db06ec0"
+clientSecret := $(shell cat clientsecret)
+
 all: build
 
 glide:
@@ -23,41 +28,22 @@ docker-push: docker
 	docker tag -f azkube "colemickens/azkube:latest"
 	docker push "colemickens/azkube"
 
+deploy-cs:
+	go run main.go deploy \
+		--tenant-id="$(tenantId)" \
+		--subscription-id="$(subscriptionId)" \
+		--auth-method="clientsecret" \
+		--client-id="$(clientId)" \
+		--client-secret="$(clientSecret)"
 
-
-# temporary for dev because I'm lazy
-
-create-common:
-	./azkube create-common \
-		--location "westus" \
-		--subscription-id "aff271ee-e9be-4441-b9bb-42f5af4cbaeb" \
-		--tenant-id "13de0a15-b5db-44b9-b682-b4ba82afbd29"
-
-create-app:
-	./azkube create-app
-
-create-pki:
-	./azkube create-pki
-
-create-ssh:
-	./azkube create-ssh
-
-deploy-vault:
-	./azkube deploy-vault
-
-upload-secrets:
-	./azkube upload-secrets
-
-deploy-myriad:
-	./azkube deploy-myriad \
-		--option \
-		--option \
-		--option
+deploy-device:
+	go run main.go deploy \
+		--tenant-id="$(tenantId)" \
+		--subscription-id="$(subscriptionId)" \
+		--auth-method="device"
 
 clean:
 	rm -f azkube
 	rm -f state.json
-
-run: quick create-common create-app create-pki create-ssh deploy-vault upload-secrets deploy-myriad
 
 clean-run: clean run

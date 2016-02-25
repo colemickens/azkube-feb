@@ -18,12 +18,11 @@ type CommonProperties struct {
 }
 
 type AppProperties struct {
-	ApplicationID                  string
-	Name                           string
-	IdentifierURL                  string
-	ServicePrincipalCertificatePem string
-	ServicePrincipalPrivateKeyPem  string
-	ServicePrincipalObjectID       string
+	ApplicationID                string
+	Name                         string
+	IdentifierURL                string
+	ServicePrincipalObjectID     string
+	ServicePrincipalClientSecret string
 }
 
 type PkiKeyCertPair struct {
@@ -78,8 +77,9 @@ type Deployer struct {
 	DeploymentsClient     resources.DeploymentsClient
 	GroupsClient          resources.GroupsClient
 	RoleAssignmentsClient authorization.RoleAssignmentsClient
-	VaultClient           VaultClient
 	AdClient              AdClient
+	TenantID              string
+	SubscriptionID        string
 }
 
 type VaultTemplateInput struct {

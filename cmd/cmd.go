@@ -1,100 +1,41 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"reflect"
-	"strings"
-
 	"github.com/colemickens/azkube/util"
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
 const (
-	rootLongDescription = "longer description"
+	rootLongDescription = "azkube is a kubernetes deployment helper for Azure"
 )
+
+var rootArgs util.RootArguments
 
 func NewRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:   "azkube",
-		Short: "azure <-> kubernetes tool",
+		Short: rootLongDescription,
 		Long:  rootLongDescription,
-		Run: func(cmd *cobra.Command, args []string) {
-		},
 	}
 
-	// on deployer's box
-	rootCmd.AddCommand(NewCreateCommonCmd())
-	rootCmd.AddCommand(NewCreateAppCmd())
-	rootCmd.AddCommand(NewCreateSshCmd())
-	rootCmd.AddCommand(NewCreatePkiCmd())
-	rootCmd.AddCommand(NewDeployVaultCmd())
-	rootCmd.AddCommand(NewUploadSecretsCmd())
-	rootCmd.AddCommand(NewDeployMyriadCmd())
+	rootCmd.PersistentFlags().StringVar(&rootArgs.TenantID, "tenant-id", "", "azure subscription id")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.SubscriptionID, "subscription-id", "", "azure tenant id")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.AuthMethod, "auth-method", "device", "auth method (default:`device`, `clientsecret`, `clientcertificate`)")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientID, "client-id", "", "client id (used with --auth-method=[clientsecret|clientcertificate])")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientSecret, "client-secret", "", "client secret (used with --auth-mode=clientsecret)")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientCertificatePath, "certificate-path", "", "path to client certificate (used with --auth-method=clientcertificate)")
+	rootCmd.PersistentFlags().StringVar(&rootArgs.PrivateKeyPath, "private-key-path", "", "path to private key (used with --auth-method=clientcertificate)")
 
-	// on deployer's box (after cluster is up)
-	rootCmd.AddCommand(NewScaleDeploymentCmd())
-	rootCmd.AddCommand(NewDestroyDeploymentCmd())
-
-	// on cluster's box
-	rootCmd.AddCommand(NewInstallCertificatesCmd())
+	rootCmd.AddCommand(NewDeployCmd())
+	//rootCmd.AddCommand(NewScaleDeploymentCmd())
+	//rootCmd.AddCommand(NewDestroyDeploymentCmd())
 
 	return rootCmd
 }
 
-func ReadAndValidateState(path string, expected, forbidden []reflect.Type) (stateOut *util.State, err error) {
-	var state util.State
-	contents, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	_ = strings.Split
-
-	//buf := strings.NewReader(string(contents))
-	//decoder := json.NewDecoder(buf)
-	//err = decoder.Decode(&state)
-	err = json.Unmarshal(contents, &state)
-	if err != nil {
-		return nil, err
-	}
-
-	stateValue := reflect.ValueOf(state)
-	for i := 0; i < stateValue.NumField(); i++ {
-		field := stateValue.FieldByIndex([]int{i})
-
-		if field.Kind() != reflect.Ptr {
-			continue
-		}
-
-		if !field.Elem().IsValid() {
-			for _, expect := range expected {
-				if field.Type() == expect {
-					return nil, fmt.Errorf("field %s was nil and should not be", field.Type().Name())
-				}
-			}
-		} else {
-			for _, forbid := range forbidden {
-				if field.Type() == forbid {
-					return nil, fmt.Errorf("field %s was filled but should not be", field.Type().Name())
-				}
-			}
-		}
-	}
-	return &state, nil
-}
-
-func WriteState(path string, state *util.State) (err error) {
-	stateJson, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path, stateJson, 0777) // TODO: review file perms
-	if err != nil {
-		return err
-	}
-
-	return nil
+func validateRootArgs(rootArgs util.RootArguments) {
+	_ = glog.Info
+	// noop for now
+	// validate auth_type, etc
 }

@@ -6,133 +6,119 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/azure-sdk-for-go/Godeps/_workspace/src/github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/azure-sdk-for-go/arm/authorization"
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
-func NewDeployerWithToken(subscriptionID, tenantID, clientID, clientSecret string) (deployer *Deployer, err error) {
-	secret := &azure.ServicePrincipalTokenSecret{
-		ClientSecret: clientSecret,
+const (
+	AzkubeClientID            = "a87032a7-203c-4bf7-913c-44c50d23409a"
+	AzureActiveDirectoryScope = "https://graph.windows.net/"
+	AzureResourceManagerScope = "https://management.core.windows.net/"
+)
+
+func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
+	// rootArgs is validated by the caller
+
+	oauthConfig, err := azure.PublicCloud.OAuthConfigForTenant(rootArgs.TenantID)
+	if err != nil {
+		return nil, err
 	}
 
-	return newDeployer(subscriptionID, tenantID, clientID, secret)
+	client := &autorest.Client{}
+	resource := AzureResourceManagerScope
+
+	var spt *azure.ServicePrincipalToken
+	switch rootArgs.AuthMethod {
+	case "device":
+		deviceCode, err := azure.InitiateDeviceAuth(client, *oauthConfig, AzkubeClientID, resource)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(*deviceCode.Message)
+		deviceToken, err := azure.WaitForUserCompletion(client, deviceCode)
+		if err != nil {
+			return nil, err
+		}
+		spt, err = azure.NewServicePrincipalTokenFromManualToken(*oauthConfig, AzkubeClientID, resource, *deviceToken)
+		if err != nil {
+			return nil, err
+		}
+		spt.Token = *deviceToken
+
+	case "clientsecret":
+		spt, err = azure.NewServicePrincipalToken(*oauthConfig, rootArgs.ClientID, rootArgs.ClientSecret, resource)
+		if err != nil {
+			return nil, err
+		}
+
+	case "clientcertificate":
+		spt, err = newDeployerFromCertificate(*oauthConfig, rootArgs.SubscriptionID, rootArgs.ClientID, rootArgs.ClientCertificatePath, rootArgs.PrivateKeyPath, resource)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("The authentication method is unknown: %q", rootArgs.AuthMethod)
+	}
+
+	var resourcesScopeSpt azure.ServicePrincipalToken = *spt
+	var adScopeSpt azure.ServicePrincipalToken = *spt
+
+	err = adScopeSpt.RefreshExchange(AzureActiveDirectoryScope)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer := &Deployer{
+		DeploymentsClient:     resources.NewDeploymentsClient(rootArgs.SubscriptionID),
+		GroupsClient:          resources.NewGroupsClient(rootArgs.SubscriptionID),
+		RoleAssignmentsClient: authorization.NewRoleAssignmentsClient(rootArgs.SubscriptionID),
+		AdClient:              AdClient{Client: autorest.Client{}, TenantID: rootArgs.TenantID},
+	}
+
+	deployer.DeploymentsClient.Authorizer = &resourcesScopeSpt
+	deployer.GroupsClient.Authorizer = &resourcesScopeSpt
+	deployer.RoleAssignmentsClient.Authorizer = &resourcesScopeSpt
+	deployer.AdClient.Authorizer = &adScopeSpt
+
+	return deployer, nil
 }
 
-func NewDeployerFromState(state State) (deployer *Deployer, err error) {
-	certificate, err := PemToCertificate(state.App.ServicePrincipalCertificatePem)
+func newDeployerFromCertificate(oauthConfig azure.OAuthConfig, subscriptionID, clientID, certificatePath, privateKeyPath, resource string) (*azure.ServicePrincipalToken, error) {
+	certificateData, err := ioutil.ReadFile(certificatePath)
 	if err != nil {
-		panic(err)
-	}
-
-	privateKey, err := PemToPrivateKey(state.App.ServicePrincipalPrivateKeyPem)
-	if err != nil {
-		panic(err)
-	}
-
-	secret := &azure.ServicePrincipalCertificateSecret{
-		Certificate: certificate,
-		PrivateKey:  privateKey,
-	}
-
-	return newDeployer(
-		state.Common.SubscriptionID,
-		state.Common.TenantID,
-		state.App.IdentifierURL,
-		secret)
-}
-
-func NewDeployerWithCertificate(subscriptionID, tenantID, appURL, certPath, keyPath string) (deployer *Deployer, err error) {
-	certificateData, err := ioutil.ReadFile(certPath)
-	if err != nil {
-		log.Fatalln("failed", err)
+		return nil, fmt.Errorf("Failed to read certificate: %q", err)
 	}
 
 	block, _ := pem.Decode(certificateData)
 	if block == nil {
-		panic("failed to decode a pem block from certificate pem")
+		return nil, fmt.Errorf("Failed to decode pem block from certificate")
 	}
 
 	certificate, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("Failed to parse certificate: %q", err)
 	}
 
-	privateKey, err := parseRsaPrivateKey(keyPath)
+	privateKey, err := parseRsaPrivateKey(privateKeyPath)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("Failed to parse rsa private key: %q", err)
 	}
 
-	secret := &azure.ServicePrincipalCertificateSecret{
-		Certificate: certificate,
-		PrivateKey:  privateKey,
-	}
-
-	return newDeployer(subscriptionID, tenantID, appURL, secret)
-}
-
-func withSecret(tenantID, clientID, scope string, secret azure.ServicePrincipalSecret) (spt *azure.ServicePrincipalToken, err error) {
-	spt, err = azure.NewServicePrincipalTokenWithSecret(
-		clientID,
-		tenantID,
-		scope,
-		secret,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Println("refreshing token for", scope)
-	err = spt.Refresh()
-	if err != nil {
-		return nil, err
-	}
-
-	return spt, nil
-}
-
-func newDeployer(subscriptionID, tenantID, clientID string, secret azure.ServicePrincipalSecret) (deployer *Deployer, err error) {
-	deployer = &Deployer{}
-	deployer.DeploymentsClient = resources.NewDeploymentsClient(subscriptionID)
-	deployer.GroupsClient = resources.NewGroupsClient(subscriptionID)
-	deployer.RoleAssignmentsClient = authorization.NewRoleAssignmentsClient(subscriptionID)
-	deployer.AdClient = AdClient{autorest.Client{}}
-	deployer.VaultClient = VaultClient{autorest.Client{}}
-
-	resourcesScopeSpt, err := withSecret(tenantID, clientID, azure.AzureResourceManagerScope, secret)
-	if err != nil {
-		return nil, err
-	}
-	vaultScopeSpt, err := withSecret(tenantID, clientID, AzureVaultScope, secret)
-	if err != nil {
-		return nil, err
-	}
-	adScopeSpt, err := withSecret(tenantID, clientID, AzureAdScope, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	deployer.DeploymentsClient.Authorizer = resourcesScopeSpt
-	deployer.GroupsClient.Authorizer = resourcesScopeSpt
-	deployer.RoleAssignmentsClient.Authorizer = resourcesScopeSpt
-	deployer.VaultClient.Authorizer = vaultScopeSpt
-	deployer.AdClient.Authorizer = adScopeSpt
-
-	return deployer, nil
+	return azure.NewServicePrincipalTokenFromCertificate(oauthConfig, clientID, certificate, privateKey, resource)
 }
 
 func parseRsaPrivateKey(path string) (*rsa.PrivateKey, error) {
 	privateKeyData, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatalln("failed", err)
+		return nil, err
 	}
 
 	block, _ := pem.Decode(privateKeyData)
 	if block == nil {
-		panic("failed to decode a pem block from private key pem")
+		return nil, fmt.Errorf("Failed to decode a pem block from private key")
 	}
 
 	privatePkcs1Key, errPkcs1 := x509.ParsePKCS1PrivateKey(block.Bytes)

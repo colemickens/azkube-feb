@@ -3,8 +3,8 @@ package util
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"log"
 
+	"github.com/golang/glog"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -12,21 +12,25 @@ const (
 	SshKeySize = 4096
 )
 
-func GenerateSsh() (sshProperties *SshProperties, err error) {
-	log.Println("generating rsa key")
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, SshKeySize)
+func GenerateSsh(outputDirectory string) (privateKey *rsa.PrivateKey, publicKeyString string, err error) {
+	glog.Info("generating %d bit rsa key", SshKeySize)
+	privateKey, err = rsa.GenerateKey(rand.Reader, SshKeySize)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	privateKeyPem := PrivateKeyToPem(privateKey)
+	// TODO: write to outputDirectory
 
-	sshProperties = &SshProperties{
-		PrivateKeyPem: string(privateKeyPem),
+	publicKey := privateKey.PublicKey
+
+	sshPublicKey, err := ssh.NewPublicKey(&publicKey)
+	if err != nil {
+		return nil, "", err
 	}
+	authorizedKeyBytes := ssh.MarshalAuthorizedKey(sshPublicKey)
+	authorizedKey := string(authorizedKeyBytes)
 
-	return sshProperties, nil
+	return privateKey, authorizedKey, nil
 }
 
 func (s *SshProperties) OpenSshPublicKey() (string, error) {

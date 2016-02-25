@@ -6,6 +6,10 @@ import (
 	"github.com/colemickens/azkube/cmd"
 )
 
+const (
+	ClientID = "azkube-client-id"
+)
+
 func main() {
 	if err := cmd.NewRootCmd().Execute(); err != nil {
 		log.Fatalln(err)

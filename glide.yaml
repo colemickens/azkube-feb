@@ -1,16 +1,21 @@
 package: azkube
 import:
 - package: github.com/Azure/azure-sdk-for-go
-  version: 05d01d05e50f0fba241862806cc3d6ee20ee8585
   subpackages:
-  - /arm/resources/resources
-- package: github.com/spf13/cobra
-  version: 9c9300901990faada0c5fb3b5730f452585c7c2b
+  - arm/resources/resources
+- package: github.com/golang/glog
 - package: github.com/pborman/uuid
-  version: dee7705ef7b324f27ceb85a121c61f2c2e8ce988
+- package: github.com/spf13/cobra
+- package: github.com/Azure/go-autorest
+  vcs: git
+  repo: https://github.com/colemickens/go-autorest
+  version: e99aa70ca4753ebac9988c7b5fd06ea1f031480a
+  subpackages:
+  - autorest
+  - autorest/azure
 - package: golang.org/x/crypto
   vcs: git
-  repo: https://github.com/colemickens/crypto
-  version: 147b0a0d44eaebb0e4b9c780d01b9af728575d49
+  repo: https://github.com/AGWA-forks/golang-crypto
+  version: cc605d7
   subpackages:
   - /pkcs12
