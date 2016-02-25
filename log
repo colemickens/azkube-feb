@@ -1,7 +1,0 @@
-$ glide rebuild
-[INFO] Building dependencies.
-[INFO] Running go build github.com/Azure/azure-sdk-for-go/arm/resources/resources
-[INFO] Running go build github.com/spf13/cobra
-[WARN] Error resolving packages: chdir /home/cole/Code/colemickens/azkube_gopath/src/github.com/colemickens/azkube/vendor/code.google.com/p/go-uuid/uuid: no such file or directory
-[INFO] Running go build golang.org/x/crypto/pkcs12
-

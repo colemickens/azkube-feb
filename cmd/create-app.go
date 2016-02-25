@@ -73,8 +73,13 @@ func NewCreateAppCmd() *cobra.Command {
 }
 
 func RunCreateAppCmd(state *util.State, appName, appURL string) {
-	// really? one line?
+	// we need to do two things
+	// One: start oauth device flow
+	// Two: create a ManualSecret that takes the access/refresh tokens directly.
+	//deviceCode := azure.InitiateDeviceAuth(client, azure.PublicCloud.OAuthConfigForTenant(tenantID))
+	//token := azure.CheckForUserCompletion(client, deviceCode)
 
+	// do refresh dance to get valid tokens for everything
 	d, err := util.NewDeployerWithToken(
 		state.Common.SubscriptionID,
 		state.Common.TenantID,

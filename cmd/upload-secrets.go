@@ -81,7 +81,7 @@ func RunUploadSecretsCmd(state *util.State) {
 	if err != nil {
 		panic(err)
 	}
-	servicePrincipalSecretURL, err := d.VaultClient.PutSecret(
+	servicePrincipalSecretURL, err := d.VaultClient.PutKeyVaultCertificate(
 		state.Vault.Name,
 		"servicePrincipal-pfx",
 		pfxBytes,

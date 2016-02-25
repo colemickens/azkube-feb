@@ -43,6 +43,11 @@ var SecretDefintions []StashedSecret
 
 ///
 
+func (v *VaultClient) PutKeyVaultCertificate(vaultName, secretName string, secretValue []byte) (secretURL string, err error) {
+
+	return v.PutSecret(vaultName, secretName, secretValue)
+}
+
 func (v *VaultClient) PutSecret(vaultName, secretName string, secretValue []byte) (secretURL string, err error) {
 	secretID := secretName // at first it's just the name, hopefully later its name/version
 
