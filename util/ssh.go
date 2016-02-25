@@ -13,7 +13,7 @@ const (
 )
 
 func GenerateSsh(outputDirectory string) (privateKey *rsa.PrivateKey, publicKeyString string, err error) {
-	glog.Info("generating %d bit rsa key", SshKeySize)
+	glog.Infof("generating %d bit rsa key", SshKeySize)
 	privateKey, err = rsa.GenerateKey(rand.Reader, SshKeySize)
 	if err != nil {
 		return nil, "", err

@@ -78,8 +78,6 @@ type Deployer struct {
 	GroupsClient          resources.GroupsClient
 	RoleAssignmentsClient authorization.RoleAssignmentsClient
 	AdClient              AdClient
-	TenantID              string
-	SubscriptionID        string
 }
 
 type VaultTemplateInput struct {

@@ -25,7 +25,7 @@ const (
 
 	ServicePrincipalKeySize = 4096
 
-	AzurePropagationWaitDelay = time.Second * 30 // TODO(Colemickens): poll instead of dumb sleep
+	AzurePropagationWaitDelay = time.Second * 10 // TODO(Colemickens): poll instead of dumb sleep
 )
 
 type AdClient struct {
@@ -132,7 +132,7 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 	req, err = autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
 		autorest.AsPost(),
-		autorest.WithBaseURL(AzureAdBaseURL),
+		autorest.WithBaseURL(azureAdURL),
 		autorest.WithPath("servicePrincipals"),
 		autorest.WithQueryParameters(q),
 		autorest.WithJSON(servicePrincipalReq))
@@ -161,13 +161,13 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 	return applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, nil
 }
 
-func (d *Deployer) CreateRoleAssignment(resourceGroup string, servicePrincipalObjectID string) error {
+func (d *Deployer) CreateRoleAssignment(rootArgs RootArguments, resourceGroup string, servicePrincipalObjectID string) error {
 	roleAssignmentName := uuid.New()
 
-	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", d.SubscriptionID, -1)
+	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", rootArgs.SubscriptionID, -1)
 	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureAdAssignedRoleId, -1)
 
-	scope := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", d.SubscriptionID, resourceGroup)
+	scope := fmt.Sprintf("subscriptions/%s/resourceGroups/%s", rootArgs.SubscriptionID, resourceGroup)
 
 	roleAssignmentParameters := authorization.RoleAssignmentCreateParameters{
 		Properties: &authorization.RoleAssignmentProperties{

@@ -90,7 +90,7 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 	}
 
 	// Create the role assignment for the App/ServicePrincipal
-	err = d.CreateRoleAssignment(deployArgs.ResourceGroup, servicePrincipalObjectID)
+	err = d.CreateRoleAssignment(rootArgs, deployArgs.ResourceGroup, servicePrincipalObjectID)
 	if err != nil {
 		panic(err)
 	}
@@ -114,8 +114,7 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 	// Template Part 1: Generate dynamic config file (or put this in the config file and fill with template)
 	// Template Part 2: blah
 
-	_ = applicationID
-	_ = servicePrincipalClientSecret
+	_, _ = applicationID, servicePrincipalClientSecret
 	_, _ = sshPrivateKey, sshPublicKeyString
 	_, _, _, _, _, _ = ca, apiserver, kubelet, kubeproxy, scheduler, replicationController
 	return nil
