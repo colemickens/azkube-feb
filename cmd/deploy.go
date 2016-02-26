@@ -67,81 +67,61 @@ func validateDeployArgs(deployArgs *util.DeployArguments) error {
 }
 
 func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArguments) error {
-	skipStuff := true
-	if !skipStuff {
-		d, err := util.NewDeployerFromCmd(rootArgs)
-		if err != nil {
-			return err
-		}
-
-		// Ensure the Resource Group exists
-		_, err = d.EnsureResourceGroup(
-			deployArgs.ResourceGroup,
-			deployArgs.Location,
-			true)
-		if err != nil {
-			return err
-		}
-
-		// Create the Active Directory application
-		appName := deployArgs.DeploymentName
-		appURL := fmt.Sprintf("https://%s/", deployArgs.DeploymentName)
-		applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, err :=
-			d.AdClient.CreateApp(appName, appURL)
-		if err != nil {
-			return err
-		}
-
-		// Create the role assignment for the App/ServicePrincipal
-		err = d.CreateRoleAssignment(rootArgs, deployArgs.ResourceGroup, servicePrincipalObjectID)
-		if err != nil {
-			return err
-		}
-
-		// Create SSH key for deployment
-		sshPrivateKey, sshPublicKeyString, err := util.GenerateSsh(path.Join(deployArgs.OutputDirectory, "private.key"))
-
-		// Create PKI for deployment
-
-		masterFQDN := fmt.Sprintf("%s.%s.cloudapp.azure.com", deployArgs.DeploymentName, deployArgs.Location)
-
-		ca, apiserver, client, err :=
-			util.CreateKubeCertificates(masterFQDN, deployArgs.MasterExtraFQDNs)
-		if err != nil {
-			return fmt.Errorf("error occurred while creating kube certificates")
-		}
-
-		_ = applicationID
-		_ = servicePrincipalClientSecret
-		_ = masterFQDN
-		_ = sshPrivateKey
-		_ = sshPublicKeyString
-		_ = ca
-		_ = apiserver
-		_ = client
+	d, err := util.NewDeployerFromCmd(rootArgs)
+	if err != nil {
+		return err
 	}
 
-	sshPublicKeyString := "x"
-	applicationID := "x"
-	servicePrincipalClientSecret := "x"
-	masterFQDN := "x"
-	ca := &util.PkiKeyCertPair{}
-	apiserver := &util.PkiKeyCertPair{}
-	client := &util.PkiKeyCertPair{}
-	sshPrivateKey := "x"
+	// Ensure the Resource Group exists
+	_, err = d.EnsureResourceGroup(
+		deployArgs.ResourceGroup,
+		deployArgs.Location,
+		true)
+	if err != nil {
+		return err
+	}
+
+	// Create the Active Directory application
+	appName := deployArgs.DeploymentName
+	appURL := fmt.Sprintf("https://%s/", deployArgs.DeploymentName)
+	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, err :=
+		d.AdClient.CreateApp(appName, appURL)
+	if err != nil {
+		return err
+	}
+
+	// Create the role assignment for the App/ServicePrincipal
+	err = d.CreateRoleAssignment(rootArgs, deployArgs.ResourceGroup, servicePrincipalObjectID)
+	if err != nil {
+		return err
+	}
+
+	// Create SSH key for deployment
+	sshPrivateKey, sshPublicKeyString, err := util.GenerateSsh(path.Join(deployArgs.OutputDirectory, "private.key"))
+
+	// Create PKI for deployment
+
+	masterFQDN := fmt.Sprintf("%s.%s.cloudapp.azure.com", deployArgs.DeploymentName, deployArgs.Location)
+
+	ca, apiserver, client, err :=
+		util.CreateKubeCertificates(masterFQDN, deployArgs.MasterExtraFQDNs)
+	if err != nil {
+		return fmt.Errorf("error occurred while creating kube certificates")
+	}
 
 	// TODO(colemick, consider): make a reserved ip for the kbue master TODO(colemick): for dns stability
 	flavorArgs := util.FlavorArguments{
-		//TenantID:       rootArgs.TenantID,
-		//SubscriptionID: rootArgs.SubscriptionID,
-		//ResourceGroup:  deployArgs.ResourceGroup,
-		//Location:       deployArgs.Location,
+		DeploymentName: deployArgs.DeploymentName,
+
+		TenantID: rootArgs.TenantID,
 
 		MasterSize:       deployArgs.MasterSize,
 		NodeSize:         deployArgs.NodeSize,
 		NodeCount:        deployArgs.NodeCount,
 		Username:         deployArgs.Username,
 		SshPublicKeyData: sshPublicKeyString,
+
+		KubernetesReleaseURL: "", // TODO(parameterize this)
 
 		ServicePrincipalClientID:     applicationID,
 		ServicePrincipalClientSecret: servicePrincipalClientSecret,
@@ -158,11 +138,15 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 		return err
 	}
 
-	fmt.Println("---------------------------------------")
-	fmt.Println(template)
-	fmt.Println("---------------------------------------")
-	fmt.Println(parameters)
-	fmt.Println("---------------------------------------")
+	_, err = d.DoDeployment(
+		deployArgs.ResourceGroup,
+		"myriad",
+		template,
+		parameters,
+		true)
+	if err != nil {
+		return err
+	}
 
 	_ = sshPrivateKey
 	return nil

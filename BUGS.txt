@@ -10,3 +10,5 @@ Possibly:
 
 
 adopt standard .gitignore
+
+could possibly do pki/ssh/create-app in parallel?

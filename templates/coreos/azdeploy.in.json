@@ -1,50 +1,153 @@
 {
 	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"deploymentName": {
+			"type": "string",
+			"metadata": {
+				"description": "name for deployment, must be unique, used as prefix"
+			}
+		},
+
+
+		"masterSize": {
+			"type": "string",
+			"defaultValue": "Standard_A1",
+			"metadata": {
+				"description": "Instance size for the VMs"
+			}
+		},
+		"nodeSize": {
+			"type": "string",
+			"defaultValue": "Standard_A1",
+			"metadata": {
+				"description": "Instance size for the VMs"
+			}
+		},
+		"nodeCount": {
+			"type": "int",
+			"defaultValue": 1,
+			"metadata": {
+				"description": "Number of node nodes to create in addition to the master"
+			}
+		},
+		"username": {
+			"type": "string",
+			"defaultValue": "kube",
+			"metadata": {
+				"description": "Username to login to the VMs"
+			}
+		},
+		"sshPublicKeyData": {
+			"type": "string",
+			"metadata": {
+				"description": "Public key for SSH authentication"
+			}
+		},
+
+
+		"tenantId": {
+			"type":" string",
+			"metadata": {
+			}
+		},
+
+
+		"servicePrincipalClientId": {
+			"type": "string",
+			"metadata": {
+				"description": "Client ID (used by cloudprovider)"
+			}
+		},
+		"servicePrincipalClientSecret": {
+			"type": "string"
+		},
+
+
+		"masterFqdn": {
+			"type": "string",
+			"metadata": {
+				"description": "The fully qualified domain name for the master"
+			}
+		},
+
+
+		"kubernetesReleaseUrl": {
+			"type": "string",
+			"defaultValue": "http://downloadlink1.1.1",
+			"metadata": {
+				"description": "container spec for hyperkube"
+			}
+		},
+
+
+		"caCertificate": {
+			"type": "string",
+			"metadata": {
+			}
+		},
+		"caPrivateKey": {
+			"type": "securestring",
+			"metadata": {
+			}
+		},
+		"apiserverCertificate": {
+			"type": "string",
+			"metadata": {
+				"description": "The AD Tenant Id"
+			}
+		},
+		"apiserverPrivateKey": {
+			"type": "securestring",
+			"metadata": {
+			}
+		},
+		"clientCertificate": {
+			"type": "string",
+			"metadata": {
+			}
+		},
+		"clientPrivateKey": {
+			"type": "securestring",
+			"metadata": {
+			}
+		}
+	},
 	"variables": {
 		"azureApiVersion": "2015-05-01-preview",
 
-		"masterVmSize": "{{.MasterVmSize}}",
-		"nodeVmSize": "{{.NodeVmSize}}",
-		"nodeVmssName": "{{.NodeVmssName}}",
-		"nodeVmssInitialCount": "{{.NodeVmssInitialCount}}",
-		"username": "{{.Username}}",
+		"vmNamePrefix": "[concat(parameters('deploymentName'), '-vm')]",
 
-		"vaultName": "{{.Name}}",
-		"servicePrincipalSecretUrl": "{{.SecretPrincipalSecretUrl}}",
+		"location": "[resourceGroup().location]",
+		"subscriptionId": "[subscription().id]",
 
-		"vmNamePrefix": "kube-",
 		"osImagePublisher": "CoreOS",
 		"osImageOffer": "CoreOS",
 		"osImageSKU": "Beta",
 
-		"nsgName": "nsg",
-		"vnetName": "vnet",
+		"nsgName": "[concat(parameters('deploymentName'), '-nsg')]",
+		"vnetName": "[concat(parameters('deploymentName'), '-vnet')]",
 		"vnetCidr": "10.0.0.0/8",
-		"etcdSubnetName": "etcdSubnet",
-		"etcdSubnetCidr": "10.0.0.0/16",
-		"masterSubnetName": "masterSubnet",
-		"masterSubnetCidr": "10.0.0.0/16",
-		"nodeSubnetName": "nodeSubnet",
-		"nodeSubnetCidr": "10.0.0.0/16",
+		"subnetName": "[concat(parameters('deploymentName'), '-subnet')]",
+		"subnetCidr": "10.0.0.0/24",
 		"vnetRef": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
-		"etcdSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('etcdSubnetName'))]",
-		"masterSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('nodeSubnetName'))]",
-		"nodeSubnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('nodeSubnetName'))]",
-		
-		"podCidr": "{{.PodCidr}}",
-		"serviceCidr": "{{.ServiceCidr}}",
+		"subnetRef": "[concat(variables('vnetRef'),'/subnets/',variables('subnetName'))]",
 
-		"masterPrivateIp": "{{.MasterPrivateIp}}",
+		"masterPrivateIp": "10.0.0.4",
 
-		"storageAccountName": "[replace(concat(resourceGroup().name, 'storage'),'-','')]",
+		"kubePodCidr": "10.2.0.0/16",
+		"kubeServiceCidr": "10.3.0.0/24",
+		"apiServiceIp": "10.3.0.1",
+		"dnsServiceIp": "10.3.0.10",
+
+		"storageAccountName": "[replace(concat(resourceGroup().name, 'strg'),'-','')]",
 		"storageContainerName": "kube-vm-disks",
 		"storageAccountType": "Standard_LRS",
-		
-		"sshAuthorizedKeysPath": "[concat('/home/{{.Username}}/.ssh/authorized_keys')]",
-		"sshPublicKeyData": "{{.SshPublicKeyData}}",
-		"masterCloudConfig": "{{.MasterCloudConfig}}",
-		"nodeCloudConfig": "{{.MinionCloudConfig}}"
+
+		"sshKeyPath": "[concat('/home/',parameters('username'),'/.ssh/authorized_keys')]",
+
+		"masterCloudConfig": "[base64(concat('{{js .MasterScript}}'))]",
+		"nodeCloudConfig": "[base64(concat('{{js .NodeScript}}'))]"
 	},
 	"resources": [
 		{
@@ -97,7 +200,7 @@
 		{
 			"type": "Microsoft.Network/publicIPAddresses",
 			"apiVersion": "[variables('azureApiVersion')]",
-			"name": "pip-master",
+			"name": "[concat(parameters('deploymentName'), '-pip-master')]",
 			"location": "[resourceGroup().location]",
 			"properties": {
 				"publicIPAllocationMethod": "Dynamic",
@@ -136,10 +239,10 @@
 		{
 			"type": "Microsoft.Network/networkInterfaces",
 			"apiVersion": "[variables('azureApiVersion')]",
-			"name": "nic-master",
+			"name": "[concat(parameters('deploymentName'), '-nic-master')]",
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
-				"[concat('Microsoft.Network/publicIPAddresses/', 'pip-master')]",
+				"[concat('Microsoft.Network/publicIPAddresses/', parameters('deploymentName'), '-pip-master')]",
 				"[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'))]"
 			],
 			"properties": {
@@ -150,7 +253,7 @@
 							"privateIPAllocationMethod": "Dynamic",
 							"privateIPAddress": "[variables('masterPrivateIp')]",
 							"publicIPAddress": {
-								"id": "[resourceId('Microsoft.Network/publicIpAddresses', 'pip-master')]"
+								"id": "[resourceId('Microsoft.Network/publicIpAddresses', concat(parameters('deploymentName'), '-pip-master'))]"
 							},
 							"subnet": {
 								"id": "[variables('subnetRef')]"
@@ -167,35 +270,23 @@
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
 				"[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
-				"[concat('Microsoft.Network/networkInterfaces/', 'nic-master')]"
+				"[concat('Microsoft.Network/networkInterfaces/', parameters('deploymentName'), '-nic-master')]"
 			],
 			"properties": {
 				"hardwareProfile": {
-					"vmSize": "[variables('masterVmSize')]"
+					"vmSize": "[parameters('masterSize')]"
 				},
 				"osProfile": {
 					"computername": "[concat(variables('vmNamePrefix'), 'master')]",
-					"adminUsername": "[variables('adminUsername')]",
+					"adminUsername": "[parameters('username')]",
 					"customData": "[variables('masterCloudConfig')]",
-					"secrets": [
-						{
-							"sourceVault": {
-								"id": "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
-							},
-							"vaultCertificates": [
-								{
-									"certificateUrl": "[variables('servicePrincipalSecretUrl')]"
-								}
-							]
-						}
-					],
 					"linuxConfiguration": {
 						"disablePasswordAuthentication": "true",
 						"ssh": {
 							"publicKeys": [
 								{
 									"path": "[variables('sshKeyPath')]",
-									"keyData": "[variables('sshPublicKeyData')]"
+									"keyData": "[parameters('sshPublicKeyData')]"
 								}
 							]
 						}
@@ -220,7 +311,7 @@
 				"networkProfile": {
 					"networkInterfaces": [
 						{
-							"id": "[resourceId('Microsoft.Network/networkInterfaces','nic-master')]"
+							"id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('deploymentName'),'-nic-master'))]"
 						}
 					]
 				}
@@ -229,7 +320,7 @@
 		{
 			"type": "Microsoft.Compute/virtualMachineScaleSets",
 			"apiVersion": "[variables('azureApiVersion')]",
-			"name": "[concat(variables('nodeVmssName')]",
+			"name": "[concat(variables('vmNamePrefix'), 'node-scaleset')]",
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
 				"[concat('Microsoft.Compute/virtualMachines/', variables('vmNamePrefix'), 'master')]",
@@ -237,9 +328,9 @@
 				"[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'))]"
 			],
 			"sku": {
-				"name": "[variables('nodeVmSize')]",
+				"name": "[parameters('nodeSize')]",
 				"tier": "Standard",
-				"capacity": "[variables('nodeCount')]"
+				"capacity": "[parameters('nodeCount')]"
 			},
 			"properties": {
 				"upgradePolicy": {
@@ -247,28 +338,16 @@
 				},
 				"virtualMachineProfile": {
 					"osProfile": {
-						"computerNamePrefix": "[concat(variables('vmNamePrefix'), 'minion')]",
-						"adminUsername": "[variables('username')]",
+						"computerNamePrefix": "[concat(variables('vmNamePrefix'), 'node')]",
+						"adminUsername": "[parameters('username')]",
 						"customData": "[variables('nodeCloudConfig')]",
-						"secrets": [
-							{
-								"sourceVault": {
-									"id": "[resourceId('Microsoft.KeyVault/vaults', variables('vaultName'))]"
-								},
-								"vaultCertificates": [
-									{
-										"certificateUrl": "[variables('servicePrincipalSecretUrl')]"
-									}
-								]
-							}
-						],
 						"linuxConfiguration": {
 							"disablePasswordAuthentication": "true",
 							"ssh": {
 								"publicKeys": [
 									{
 										"path": "[variables('sshKeyPath')]",
-										"keyData": "[variables('sshPublicKeyData')]"
+										"keyData": "[parameters('sshPublicKeyData')]"
 									}
 								]
 							}
@@ -282,7 +361,7 @@
 							"version": "latest"
 						},
 						"osDisk": {
-							"name": "[concat(variables('vmNamePrefix'), 'minion-disk')]",
+							"name": "[concat(variables('vmNamePrefix'), 'node-disk')]",
 							"vhdContainers": [
 								"[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('storageContainerName'))]"
 							],
@@ -292,13 +371,13 @@
 					},
 					"networkProfile": {
 						"networkInterfaceConfigurations": [
-						{
-								"name": "minion-nic",
+							{
+								"name": "[concat(parameters('deploymentName'), '-node-nic')]",
 								"properties": {
 									"primary": "true",
 									"ipConfigurations": [
 										{
-											"name": "minion-ip",
+											"name": "[concat(parameters('deploymentName'), '-node-ip')]",
 											"properties": {
 												"subnet": {
 													"id": "[concat(resourceId('Microsoft.Network/virtualNetworks/', variables('vnetName')), '/subnets/', variables('subnetName'))]"

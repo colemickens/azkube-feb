@@ -30,10 +30,9 @@ type DeployArguments struct {
 // this is what flavors get.
 // make a way to opt-in/opt-out?
 type FlavorArguments struct {
-	//TenantID       string (derivable)
-	//SubscriptionID string (derivable from template func/vars)
-	//ResourceGroup  string (derivable from template stuffs)
-	//Location       string (derivable from template stuffs)
+	DeploymentName string
+
+	TenantID string
 
 	MasterSize       string
 	NodeSize         string
@@ -45,6 +44,8 @@ type FlavorArguments struct {
 	ServicePrincipalClientSecret string
 
 	MasterFQDN string
+
+	KubernetesReleaseURL string
 
 	CAKeyPair        *PkiKeyCertPair
 	ApiserverKeyPair *PkiKeyCertPair

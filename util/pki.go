@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"math/big"
 	"time"
 
@@ -79,17 +78,8 @@ func createCertificate(filenamePrefix string, commonName string, isCA bool, isSe
 	certificatePem := CertificateToPem(certDerBytes)
 	privateKeyPem := PrivateKeyToPem(privateKey)
 
-	certificatePemString, err := json.Marshal(certificatePem)
-	if err != nil {
-		return nil, err
-	}
-	privateKeyPemString, err := json.Marshal(privateKeyPem)
-	if err != nil {
-		return nil, err
-	}
-
 	return &PkiKeyCertPair{
-		CertificatePem: string(certificatePemString),
-		PrivateKeyPem:  string(privateKeyPemString),
+		CertificatePem: string(certificatePem),
+		PrivateKeyPem:  string(privateKeyPem),
 	}, nil
 }

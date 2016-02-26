@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
@@ -35,8 +36,13 @@ func init() {
 	nodeScript = mustRead("templates/coreos/node-cloudconfig.in.yml")
 
 	var err error
+
 	myriadTemplate, err =
 		template.New("myriadTemplate").Parse(mustRead("templates/coreos/azdeploy.in.json"))
+	if err != nil {
+		panic(err)
+	}
+
 	myriadParametersTemplate, err =
 		template.New("myriadParameters").Parse(mustRead("templates/coreos/parameters.in.json"))
 	if err != nil {
@@ -51,6 +57,7 @@ func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, paramet
 	log.Info("template: preparing node script")
 	nodeScript, _ := prepareScript(nodeScript)
 
+	log.Info("template: populating myriad parameters")
 	// TODO: consider, does this "list" become part of the flavor interface?
 	myriadParameters, err := populateTemplate(
 		myriadParametersTemplate,
@@ -59,6 +66,7 @@ func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, paramet
 		return nil, nil, err
 	}
 
+	log.Info("template: populating myriad template")
 	myriadTemplate, err := populateTemplate(
 		myriadTemplate,
 		struct{ MasterScript, NodeScript string }{masterScript, nodeScript})
@@ -67,10 +75,9 @@ func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, paramet
 	}
 
 	// TODO: persist this to disk
+	log.Info("template: all done")
 
-	// smoosh them into maps so we can return
-
-	return myriadParameters, myriadTemplate, nil
+	return myriadTemplate, myriadParameters, nil
 }
 
 func prepareScript(script string) (string, error) {
@@ -81,27 +88,41 @@ func prepareScript(script string) (string, error) {
 	script = variableRegex.ReplaceAllString(script, `', variables('$1'), '`)
 	script = parameterRegex.ReplaceAllString(script, `', parameters('$1'), '`)
 
-	script = `[concat('` + script + `')]`
+	// this is commented out because we escape in the template syntax
+	// but the single quotes here need to NOT be escaped
+	//script = `[concat('` + script + `')]`
 
-	bytes, err := json.Marshal(script)
+	/*bytes, err := json.Marshal(script)
 	if err != nil {
 		return "", err
 	}
 
-	return string(bytes), nil
+	return string(bytes), nil*/
+	return script, nil
 }
 
 func populateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}
 
+	if t == nil {
+		log.Fatal("Nil!!!")
+	}
+
 	err = t.Execute(&myriadBuf, state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("template: failed to execute template: %q", err)
 	}
+
+	err = ioutil.WriteFile(fmt.Sprintf("/home/cole/%s.txt", t.Name()), myriadBuf.Bytes(), 0666)
+	if err != nil {
+		panic(err)
+	}
+	log.Info("looggeeeeeeeeeeeed it")
+
 	err = json.Unmarshal(myriadBuf.Bytes(), &myriadMap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("template: failed to unmarshal into map: %q", err)
 	}
 
 	return myriadMap, nil

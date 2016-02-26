@@ -5,7 +5,7 @@
 Tool used to deploy and bootstrap a Kubernetes cluster in Azure.
 
 
-## Usage
+## Running
 
 ### From source
 ```
@@ -18,6 +18,10 @@ $GOPATH/bin/azkube --tenant-id="{your tenant id}" --subscription-id="{subscripti
 docker run -it colemickens/azkube:latest /azkube --tenant-id="{your tenant id}" --subscription-id="{subscription id}"
 ```
 
+## Usage
+
+[ insert generated output from cobra's command facilities ]
+
 
 ## Motivations
 1. Existing shell script was fragile.
@@ -25,6 +29,10 @@ docker run -it colemickens/azkube:latest /azkube --tenant-id="{your tenant id}" 
 3. Need a tool and process to create service principals and configure them appropriately.
 4. Need a tool to consume scripts, interweave ARM template variables/parameters, and output a "deployable" template.
 
+## Future
+
+As Azure lands support for managed service identity and metadata facilities, much of the need for this tool will be alleviated.
+Further, in lieu of those, Terraform is much more flexible and powerful than ARM Templates. Particularly when the Azurerm provider gains the ability to create ServicePrincipals, then a single terraform file could do everything this tool does. This is due to the power of HCL, and the fact that Terraform can express more concepts than ARM Templates.
 
 ## Future Improvements
 1. Introduce concept of "flavors" with a defined interface that we hand off
@@ -34,8 +42,3 @@ docker run -it colemickens/azkube:latest /azkube --tenant-id="{your tenant id}" 
 ## Notes
 1. The user who executes the application must have permission to provision additional applications.
 2. The resulting "templates" are fully parameterized and generic. They can be uploaded and used by others.
-
-
-## Todo
-1. create a way to bypass needing to create more applications - this requires a user present, or requires giving the runner Company User Admin permissions which is not encouraged.
-2. create a way of specifying the ssh key to use

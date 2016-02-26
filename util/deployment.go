@@ -3,31 +3,31 @@ package util
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 )
 
-func (d *Deployer) DoDeployment(common CommonProperties, name string, template map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
+func (d *Deployer) DoDeployment(resourceGroupName, deploymentName string, template map[string]interface{}, parameters map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
 	deployment := resources.Deployment{
 		Properties: &resources.DeploymentProperties{
-			Template: &template,
-			Mode:     resources.Incremental,
+			Template:   &template,
+			Parameters: &parameters,
+			Mode:       resources.Incremental,
 		},
 	}
 
 	deploymentResponse, err := d.DeploymentsClient.CreateOrUpdate(
-		common.ResourceGroup,
-		common.ResourceGroup+"-"+name+"-deploy",
+		resourceGroupName,
+		resourceGroupName+"-"+deploymentName+"-deploy",
 		deployment)
 	if err != nil {
 		panic(err)
 	}
 
 	if waitDeployment {
-		// TODO(colemickens): assert this name is the same?
-		// here we use the returned deploymentName but in groups we use original resGroup name?
 		deploymentName := *deploymentResponse.Name
-		response, err = d.WaitDeployment(common.ResourceGroup, deploymentName)
+		response, err = d.WaitDeployment(resourceGroupName, deploymentName)
 		return response, err
 	}
 
@@ -38,6 +38,8 @@ func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resour
 	var err error
 	var response resources.DeploymentExtended
 	for {
+		time.Sleep(5 * time.Second)
+
 		response, err = d.DeploymentsClient.Get(resourceGroup, deploymentName)
 		if err != nil {
 			return &response, err
@@ -45,7 +47,7 @@ func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resour
 
 		state := response.Properties.ProvisioningState
 
-		if state == nil {
+		if state == nil || *state == "Accepted" || *state == "Running" {
 			continue
 		}
 

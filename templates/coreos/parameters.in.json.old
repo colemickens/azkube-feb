@@ -1,6 +1,4 @@
 {
-  "deploymentName": { "value": "{{js .DeploymentName}}" },
-
   "tenantId": { "value": "{{js .TenantID}}" },
 
   "masterSize":       { "value": "{{js .MasterSize}}"       },
