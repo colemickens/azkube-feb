@@ -5,9 +5,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"math/big"
-	"net"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -18,36 +20,27 @@ const (
 // TODO(colemickens): could surely refactor/dedupe the two functions below, similar to x509's CreateCertificate
 // TODO(Colemickens): potential options, duration, alt subj names, etc
 
-func CreateKubeCertificates(masterFQDN string, extraFQDNs []string, ipAddress net.IP) (*PkiKeyCertPair, *PkiKeyCertPair, *PkiKeyCertPair, *PkiKeyCertPair, *PkiKeyCertPair, *PkiKeyCertPair, error) {
-	ca, err := createCertificate("ca", "Azkube Certificate Authority", true, false, "", nil)
+func CreateKubeCertificates(masterFQDN string, extraFQDNs []string) (*PkiKeyCertPair, *PkiKeyCertPair, *PkiKeyCertPair, error) {
+	log.Info("pki: generating certificate authority")
+	ca, err := createCertificate("ca", "Azkube Certificate Authority", true, false, "")
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
-	apiserver, err := createCertificate("apiserver", "apiserver", false, true, masterFQDN, &ipAddress, extraFQDNs...)
+	log.Info("pki: generating apiserver server certificate")
+	apiserver, err := createCertificate("apiserver", "apiserver", false, true, masterFQDN, extraFQDNs...)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
-	kubelet, err := createCertificate("kubelet", "kubelet", false, false, "", nil)
+	log.Info("pki: generating client certificate")
+	client, err := createCertificate("client", "client", false, false, "")
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	kubeproxy, err := createCertificate("kubeproxy", "kubeproxy", false, false, "", nil)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	scheduler, err := createCertificate("scheduler", "scheduler", false, false, "", nil)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	replicationController, err := createCertificate("replicationController", "replicationController", false, false, "", nil)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return ca, apiserver, kubelet, kubeproxy, scheduler, replicationController, nil
+	return ca, apiserver, client, nil
 }
 
-func createCertificate(filenamePrefix string, commonName string, isCA bool, isServer bool, FQDN string, ipAddress *net.IP, extraFQDNs ...string) (*PkiKeyCertPair, error) {
+func createCertificate(filenamePrefix string, commonName string, isCA bool, isServer bool, FQDN string, extraFQDNs ...string) (*PkiKeyCertPair, error) {
 	var err error
 
 	now := time.Now()
@@ -68,7 +61,6 @@ func createCertificate(filenamePrefix string, commonName string, isCA bool, isSe
 	}
 	if isServer {
 		template.DNSNames = extraFQDNs
-		template.IPAddresses = []net.IP{*ipAddress}
 	}
 
 	snMax := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -87,8 +79,17 @@ func createCertificate(filenamePrefix string, commonName string, isCA bool, isSe
 	certificatePem := CertificateToPem(certDerBytes)
 	privateKeyPem := PrivateKeyToPem(privateKey)
 
+	certificatePemString, err := json.Marshal(certificatePem)
+	if err != nil {
+		return nil, err
+	}
+	privateKeyPemString, err := json.Marshal(privateKeyPem)
+	if err != nil {
+		return nil, err
+	}
+
 	return &PkiKeyCertPair{
-		CertificatePem: string(certificatePem),
-		PrivateKeyPem:  string(privateKeyPem),
+		CertificatePem: string(certificatePemString),
+		PrivateKeyPem:  string(privateKeyPemString),
 	}, nil
 }

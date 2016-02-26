@@ -28,7 +28,8 @@ func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
 	}
 
 	client := &autorest.Client{}
-	resource := AzureResourceManagerScope
+	//resource := AzureResourceManagerScope
+	resource := AzureActiveDirectoryScope
 
 	var spt *azure.ServicePrincipalToken
 	switch rootArgs.AuthMethod {
@@ -66,7 +67,11 @@ func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
 	var resourcesScopeSpt azure.ServicePrincipalToken = *spt
 	var adScopeSpt azure.ServicePrincipalToken = *spt
 
-	err = adScopeSpt.RefreshExchange(AzureActiveDirectoryScope)
+	//alternativeResource := AzureActiveDirectoryScope
+	alternativeResource := AzureResourceManagerScope
+
+	//err = adScopeSpt.RefreshExchange(alternativeResource)
+	err = resourcesScopeSpt.RefreshExchange(alternativeResource)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"flag"
-
 	"github.com/colemickens/azkube/util"
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
 
@@ -37,8 +34,6 @@ func NewRootCmd() *cobra.Command {
 }
 
 func validateRootArgs(rootArgs util.RootArguments) {
-	flag.Parse() // make glog happy (why couldn't they just have an init?)
-	_ = glog.Info
 	// noop for now
 	// validate auth_type, etc
 }

@@ -4,48 +4,94 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"regexp"
+	"strings"
 	"text/template"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 var (
-	MasterCloudConfigTemplate *template.Template
-	NodeCloudConfigTemplate   *template.Template
-	VaultTemplate             *template.Template
-	MyriadTemplate            *template.Template
-	ScaleTemplate             *template.Template
+	myriadTemplate           *template.Template
+	myriadParametersTemplate *template.Template
+	masterScript             string
+	nodeScript               string
+
+	variableRegex  = regexp.MustCompile(`[[[(a-zA-Z)]]]`)
+	parameterRegex = regexp.MustCompile(`{{{(a-zA-Z)}}}`)
 )
 
 func init() {
-	x := func(y, z string) *template.Template {
-		bytes, err := ioutil.ReadFile(y)
+	mustRead := func(f string) string {
+		bytes, err := ioutil.ReadFile(f)
 		if err != nil {
 			panic(err)
 		}
 		contents := string(bytes)
-
-		return template.Must(template.New(z).Parse(contents))
+		return contents
 	}
 
-	MasterCloudConfigTemplate = x("templates/coreos/master-cloudconfig.in.yml", "masterCloudConfigTemplate")
-	NodeCloudConfigTemplate = x("templates/coreos/node-cloudconfig.in.yml", "nodeCloudConfigTemplate")
-	MyriadTemplate = x("templates/coreos/myriad.in.json", "myriadTemplate")
+	masterScript = mustRead("templates/coreos/master-cloudconfig.in.yml")
+	nodeScript = mustRead("templates/coreos/node-cloudconfig.in.yml")
+
+	var err error
+	myriadTemplate, err =
+		template.New("myriadTemplate").Parse(mustRead("templates/coreos/azdeploy.in.json"))
+	myriadParametersTemplate, err =
+		template.New("myriadParameters").Parse(mustRead("templates/coreos/parameters.in.json"))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func PopulateAndFlattenTemplate(t *template.Template, state interface{}) (string, error) {
-	filled, err := PopulateTemplate(t, state)
+func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, parameters map[string]interface{}, err error) {
+	log.Info("template: preparing master script")
+	masterScript, _ := prepareScript(masterScript)
+
+	log.Info("template: preparing node script")
+	nodeScript, _ := prepareScript(nodeScript)
+
+	// TODO: consider, does this "list" become part of the flavor interface?
+	myriadParameters, err := populateTemplate(
+		myriadParametersTemplate,
+		flavorArgs)
 	if err != nil {
-		return "", nil
+		return nil, nil, err
 	}
 
-	data, err := json.Marshal(&filled)
+	myriadTemplate, err := populateTemplate(
+		myriadTemplate,
+		struct{ MasterScript, NodeScript string }{masterScript, nodeScript})
 	if err != nil {
-		return "", nil
+		return nil, nil, err
 	}
 
-	return string(data), nil
+	// TODO: persist this to disk
+
+	// smoosh them into maps so we can return
+
+	return myriadParameters, myriadTemplate, nil
 }
 
-func PopulateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
+func prepareScript(script string) (string, error) {
+	if strings.Contains(script, "'") {
+		panic("NO SINGLE QUOTES") // TODO(colemick): nicer...
+	}
+
+	script = variableRegex.ReplaceAllString(script, `', variables('$1'), '`)
+	script = parameterRegex.ReplaceAllString(script, `', parameters('$1'), '`)
+
+	script = `[concat('` + script + `')]`
+
+	bytes, err := json.Marshal(script)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func populateTemplate(t *template.Template, state interface{}) (template map[string]interface{}, err error) {
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}
 

@@ -2,12 +2,13 @@ package util
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
+	log "github.com/Sirupsen/logrus"
 )
 
 func (d *Deployer) EnsureResourceGroup(name, location string, waitDeployment bool) (resourceGroup *resources.ResourceGroup, err error) {
+	log.Infof("groups: ensuring resource group %q exists", name)
 	response, err := d.GroupsClient.CreateOrUpdate(name, resources.ResourceGroup{
 		Name:     &name,
 		Location: &location,
@@ -23,10 +24,11 @@ func (d *Deployer) EnsureResourceGroup(name, location string, waitDeployment boo
 	return &response, nil
 }
 
-func (d *Deployer) WaitResourceGroup(groupName string) (resourceGroup *resources.ResourceGroup, err error) {
+func (d *Deployer) WaitResourceGroup(name string) (resourceGroup *resources.ResourceGroup, err error) {
 	var response resources.ResourceGroup
+	log.Infof("groups: waiting for resource group %q to finish provisioning", name)
 	for {
-		response, err = d.GroupsClient.Get(groupName)
+		response, err = d.GroupsClient.Get(name)
 		if err != nil {
 			return &response, err
 		}
@@ -38,12 +40,16 @@ func (d *Deployer) WaitResourceGroup(groupName string) (resourceGroup *resources
 		}
 
 		if *state == "Succeeded" {
-			log.Println("group deployment succeeded!")
+			log.Infof("groups: resource group %q is provisioned", name)
 			return &response, nil
 		} else if *state == "Failed" {
-			return &response, fmt.Errorf("group deployment failed!")
+			errorMessage := "groups: resource group %q failed to provision (ProvisioningState == 'Failed')"
+			log.Errorf(errorMessage, name)
+			return &response, fmt.Errorf(errorMessage, name)
 		} else {
-			return &response, fmt.Errorf("group deployment went into unknown state: %s", *state)
+			errorMessage := "groups: resource group %q in unknown provision state (ProvisioningState == %q)"
+			log.Errorf(errorMessage, name, *state)
+			return &response, fmt.Errorf(errorMessage, name, *state)
 		}
 	}
 

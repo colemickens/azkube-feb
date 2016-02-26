@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/arm/authorization"
 	"github.com/Azure/go-autorest/autorest"
+	log "github.com/Sirupsen/logrus"
 	"github.com/pborman/uuid"
 )
 
@@ -25,7 +26,7 @@ const (
 
 	ServicePrincipalKeySize = 4096
 
-	AzurePropagationWaitDelay = time.Second * 10 // TODO(Colemickens): poll instead of dumb sleep
+	AzurePropagationWaitDelay = time.Second * 30 // TODO(Colemickens): poll instead of dumb sleep
 )
 
 type AdClient struct {
@@ -74,6 +75,8 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 
 	servicePrincipalClientSecret = uuid.New()
 
+	log.Infof("ad: creating application with name=%q identifierURL=%q", appName, appURL)
+
 	applicationReq := AdApplication{
 		AvailableToOtherTenants: false,
 		DisplayName:             appName,
@@ -101,11 +104,13 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 		autorest.WithQueryParameters(q),
 		autorest.WithJSON(applicationReq))
 	if err != nil {
+		log.Errorf("ad: failed to prepare the application creation request")
 		return "", "", "", err
 	}
 
 	resp, err := a.Send(req)
 	if err != nil {
+		log.Errorf("ad: failed to send the application creation request")
 		return "", "", "", err
 	}
 
@@ -115,19 +120,21 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 		autorest.WithErrorUnlessStatusCode(http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&applicationResp))
 	if err != nil {
+		log.Errorf("ad: failed to respond to application creation response")
 		return "", "", "", err
 	}
 
 	applicationID = applicationResp.ApplicationID
 
-	// TODO(colemick): not great, or even good
-	time.Sleep(AzurePropagationWaitDelay)
+	time.Sleep(AzurePropagationWaitDelay) // TODO(colemick): not great, or even good
 
 	servicePrincipalReq := AdServicePrincipal{
 		ApplicationID:  applicationID,
 		AccountEnabled: true,
 		// ServicePrincipalNames: []string{appURL},
 	}
+
+	log.Infof("ad: creating servicePrincipal for applicationID: %q", applicationID)
 
 	req, err = autorest.Prepare(&http.Request{},
 		autorest.AsJSON(),
@@ -137,11 +144,13 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 		autorest.WithQueryParameters(q),
 		autorest.WithJSON(servicePrincipalReq))
 	if err != nil {
+		log.Errorf("ad: failed to prepare the servicePrincipal creation request")
 		return "", "", "", err
 	}
 
 	resp, err = a.Send(req)
 	if err != nil {
+		log.Errorf("ad: failed to send the servicePrincipal creation request")
 		return "", "", "", err
 	}
 
@@ -151,6 +160,7 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 		autorest.WithErrorUnlessStatusCode(http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&servicePrincipalResp))
 	if err != nil {
+		log.Errorf("ad: failed to respond to the servicePrincipal creation request")
 		return "", "", "", err
 	}
 
@@ -169,6 +179,8 @@ func (d *Deployer) CreateRoleAssignment(rootArgs RootArguments, resourceGroup st
 
 	scope := fmt.Sprintf("subscriptions/%s/resourceGroups/%s", rootArgs.SubscriptionID, resourceGroup)
 
+	log.Infof("ad: creating role assignment for servicePrincipal (objectId=%q)", servicePrincipalObjectID)
+
 	roleAssignmentParameters := authorization.RoleAssignmentCreateParameters{
 		Properties: &authorization.RoleAssignmentProperties{
 			RoleDefinitionID: &roleDefinitionId,
@@ -182,6 +194,7 @@ func (d *Deployer) CreateRoleAssignment(rootArgs RootArguments, resourceGroup st
 		roleAssignmentParameters,
 	)
 	if err != nil {
+		log.Errorf("failed to create role assignment: %q", err)
 		return err
 	}
 

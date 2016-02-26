@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 
-	"github.com/golang/glog"
+	log "github.com/Sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -13,7 +13,7 @@ const (
 )
 
 func GenerateSsh(outputDirectory string) (privateKey *rsa.PrivateKey, publicKeyString string, err error) {
-	glog.Infof("generating %d bit rsa key", SshKeySize)
+	log.Infof("ssh: generating %dbit rsa key", SshKeySize)
 	privateKey, err = rsa.GenerateKey(rand.Reader, SshKeySize)
 	if err != nil {
 		return nil, "", err

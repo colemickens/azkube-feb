@@ -1,0 +1,19 @@
+{
+  "masterSize":       { "value": "{{.MasterSize}}"       },
+  "nodeSize":         { "value": "{{.NodeSize}}"         },
+  "nodeCount":        { "value": {{.NodeCount}}          },
+  "username":         { "value": "{{.Username}}"         },
+  "sshPublicKeyData": { "value": "{{.SshPublicKeyData}}" },
+
+  "servicePrincipalClientId":     { "value": "{{.ServicePrincipalClientID}}"     },
+  "servicePrincipalClientSecret": { "value": "{{.ServicePrincipalClientSecret}}" },
+
+  "masterFqdn": { "value": "{{.MasterFQDN}}" },
+
+  "caCertificate":        { "value": "{{.CAKeyPair.CertificatePem}}"        },
+  "caPrivateKey":         { "value": "{{.CAKeyPair.PrivateKeyPem}}"         },
+  "apiserverCertificate": { "value": "{{.ApiserverKeyPair.CertificatePem}}" },
+  "apiserverPrivateKey":  { "value": "{{.ApiserverKeyPair.PrivateKeyPem}}"  },
+  "clientCertificate":    { "value": "{{.ClientKeyPair.CertificatePem}}"    },
+  "clientPrivateKey":     { "value": "{{.ClientKeyPair.PrivateKeyPem}}"     }
+}

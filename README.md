@@ -1,62 +1,41 @@
 # azkube
 
+
 ## Overview
 Tool used to deploy and bootstrap a Kubernetes cluster in Azure.
 
 
-## Ideas
+## Usage
 
-Use confd for managing upgrades?
+### From source
+```
+go get github.com/colemickens/azkube
+$GOPATH/bin/azkube --tenant-id="{your tenant id}" --subscription-id="{subscription id}"
+```
 
-
-## Requirements
-
-1. Install either [Widows Azure PowerShell Tools](https://github.com/Azure/azure-powershell) or the [azure-xplat-cli](https://github.com/Azure/azure-xplat-cli).
-
-2. Docker
-
-
-## Prepare
-
-You will need to create a ServicePrincipal with the Owner role in your subscription. While these instructions are written with the [azure-xplat-cli](https://github.com/Azure/azure-xplat-cli) in mind, the Service Principal can be created with the PowerShell tooling as well.
-
-This Owner account is used by `azkube` to provision a new ServicePrincipal with Contributor access for each cluster.
-It is also used to do the initial deployment.
-
-This Contributor account is used by the Kubernetes cluster to provision and manage Azure resources as needed.
-
-1. Create a new Azure Active Directory account:
-
-	`azure ad app create --name "azkube" --password "somepassword"`
-
-2. Create a service principal for the application
-
-	`azure sp create {app-id}`
-
-	Replace `{app-id}` with the ApplicationID reported by the previous step.
-
-3. Assign the Owner role to the new Service Principal.
-
-	`azure ad role assignment create --spn "http://azkube" --roleName "Owner" --subscription "{your-subscription-id}`
+### Docker
+```
+docker run -it colemickens/azkube:latest /azkube --tenant-id="{your tenant id}" --subscription-id="{subscription id}"
+```
 
 
+## Motivations
+1. Existing shell script was fragile.
+2. azure-xplat-cli changes out from underneath of us, and is slow, and doesn't handle errors well.
+3. Need a tool and process to create service principals and configure them appropriately.
+4. Need a tool to consume scripts, interweave ARM template variables/parameters, and output a "deployable" template.
 
-## Deploy
 
-`docker run -it colemickens:azkube /azkube deploy -config config.json`
+## Future Improvements
+1. Introduce concept of "flavors" with a defined interface that we hand off
+2. Introduce an ubuntu 16.04 LTS (beta) flavor
 
-Wait for the deployment to finish!
+
+## Notes
+1. The user who executes the application must have permission to provision additional applications.
+2. The resulting "templates" are fully parameterized and generic. They can be uploaded and used by others.
+
 
 ## Todo
-- ?
-
-## Future Ideas
-- Terraform?
-- Confd for upgrading cluster?
-
-## Issues brought up:
-
-1. MASTER_IP could be fragile? (I'm not sure it is in Azure...)
-
-2. Porting to ubuntu could be difficult because of docker-bootstrap instance
-
+1. create a way to bypass needing to create more applications - this requires a user present, or requires giving the runner Company User Admin permissions which is not encouraged.
+2. create a way of specifying the ssh key to use

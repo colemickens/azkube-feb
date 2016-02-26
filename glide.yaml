@@ -3,7 +3,6 @@ import:
 - package: github.com/Azure/azure-sdk-for-go
   subpackages:
   - arm/resources/resources
-- package: github.com/golang/glog
 - package: github.com/pborman/uuid
 - package: github.com/spf13/cobra
 - package: github.com/Azure/go-autorest
@@ -19,3 +18,7 @@ import:
   version: cc605d7
   subpackages:
   - /pkcs12
+- package: github.com/Sirupsen/logrus
+  vcs: git
+  repo: https://github.com/Sirupsen/logrus
+  version: 219c8cb75c258c552e999735be6df753ffc7afdc
