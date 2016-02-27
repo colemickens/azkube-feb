@@ -18,8 +18,8 @@ var (
 	masterScript             string
 	nodeScript               string
 
-	variableRegex  = regexp.MustCompile(`[[[(a-zA-Z)]]]`)
-	parameterRegex = regexp.MustCompile(`{{{(a-zA-Z)}}}`)
+	variableRegex  = regexp.MustCompile(`\[\[\[([a-zA-Z]+)\]\]\]`)
+	parameterRegex = regexp.MustCompile(`\{\{\{([a-zA-Z]+)\}\}\}`)
 )
 
 func init() {
@@ -85,19 +85,13 @@ func prepareScript(script string) (string, error) {
 		panic("NO SINGLE QUOTES") // TODO(colemick): nicer...
 	}
 
+	script = template.JSEscapeString(script)
+
 	script = variableRegex.ReplaceAllString(script, `', variables('$1'), '`)
 	script = parameterRegex.ReplaceAllString(script, `', parameters('$1'), '`)
 
-	// this is commented out because we escape in the template syntax
-	// but the single quotes here need to NOT be escaped
-	//script = `[concat('` + script + `')]`
+	script = `[base64(concat('` + script + `'))]`
 
-	/*bytes, err := json.Marshal(script)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil*/
 	return script, nil
 }
 

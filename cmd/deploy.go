@@ -12,6 +12,8 @@ import (
 
 const (
 	deployLongDescription = "creates a new kubernetes cluster in Azure"
+
+	kubernetesStableReleaseURL = "https://github.com/kubernetes/kubernetes/releases/download/v1.1.8/kubernetes.tar.gz"
 )
 
 func NewDeployCmd() *cobra.Command {
@@ -41,6 +43,7 @@ func NewDeployCmd() *cobra.Command {
 	flags.StringVar(&deployArgs.Location, "location", "brazilsouth", "location to deploy Azure resource (these can be found by running `azure location list` with azure-xplat-cli)")
 	flags.StringVar(&deployArgs.MasterSize, "master-size", "Standard_A1", "size of the master virtual machine")
 	flags.StringVar(&deployArgs.NodeSize, "node-size", "Standard_A1", "size of the node virtual machines")
+	flags.StringVar(&deployArgs.KubernetesReleaseURL, "kubernetes-release-url", kubernetesStableReleaseURL, "size of the node virtual machines")
 	flags.IntVar(&deployArgs.NodeCount, "node-count", 3, "initial number of node virtual machines")
 	flags.StringVar(&deployArgs.Username, "username", "kube", "username to virtual machines")
 	flags.StringSliceVar(&deployArgs.MasterExtraFQDNs, "master-extra-fqdns", []string{}, "comma delimited list of SANs for the master")
@@ -121,7 +124,7 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 		Username:         deployArgs.Username,
 		SshPublicKeyData: sshPublicKeyString,
 
-		KubernetesReleaseURL: "", // TODO(parameterize this)
+		KubernetesReleaseURL: deployArgs.KubernetesReleaseURL, // TODO(parameterize this)
 
 		ServicePrincipalClientID:     applicationID,
 		ServicePrincipalClientSecret: servicePrincipalClientSecret,

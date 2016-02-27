@@ -1,5 +1,8 @@
 #cloud-config
 
+[[[var]]]
+{{{param}}}
+
 write_files:
 - path: "/etc/kubernetes/azure.json"
   permissions: "0644"

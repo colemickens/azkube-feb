@@ -146,8 +146,8 @@
 
 		"sshKeyPath": "[concat('/home/',parameters('username'),'/.ssh/authorized_keys')]",
 
-		"masterCloudConfig": "[base64(concat('{{js .MasterScript}}'))]",
-		"nodeCloudConfig": "[base64(concat('{{js .NodeScript}}'))]"
+		"masterCloudConfig": "{{ .MasterScript}}",
+		"nodeCloudConfig": "{{ .NodeScript}}"
 	},
 	"resources": [
 		{
