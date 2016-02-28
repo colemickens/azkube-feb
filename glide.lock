@@ -1,5 +1,5 @@
-hash: 694bce602fd9713f0a634cd6f19a3612a64ac4bdf3fb3b8ce8704f5e1b61b0ce
-updated: 2016-02-28T01:56:15.570037634-08:00
+hash: a4ba9980a47c01a509b971ccea178d1d6bf95c6ad84c9146f3b0a3616249122b
+updated: 2016-02-28T03:15:02.824827917-08:00
 imports:
 - name: github.com/Azure/azure-sdk-for-go
   version: 95361a2573b1fa92a00c5fc2707a80308483c6f9
@@ -15,23 +15,50 @@ imports:
   - autorest/azure
   - autorest/to
   - autorest/date
+- name: github.com/BurntSushi/toml
+  version: a4eecd407cf4129fc902ece859a0114e4cf1a7f4
 - name: github.com/dgrijalva/jwt-go
   version: f2193411bd642f7db03249fd79d5292c9b34916a
+- name: github.com/hashicorp/hcl
+  version: 1c284ec98f4b398443cbabb0d9197f7f4cc0077c
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/token
+  - json/parser
+  - hcl/scanner
+  - hcl/strconv
+  - json/scanner
+  - json/token
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/kr/pretty
+  version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
+- name: github.com/kr/text
+  version: bb797dc4fb8320488f47bf11de07a733d7233e1f
+- name: github.com/magiconair/properties
+  version: 497d0afefddf378f9ffb3c89db6a326985908519
+- name: github.com/mitchellh/mapstructure
+  version: d2dd0262208475919e1a362f675cfc0e7c10e905
 - name: github.com/pborman/uuid
   version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/Sirupsen/logrus
   version: 219c8cb75c258c552e999735be6df753ffc7afdc
   repo: https://github.com/Sirupsen/logrus
   vcs: git
+- name: github.com/spf13/cast
+  version: ee7b3e0353166ab1f3a605294ac8cd2b77953778
 - name: github.com/spf13/cobra
   version: 65a708cee0a4424f4e353d031ce440643e312f92
+- name: github.com/spf13/jwalterweatherman
+  version: d00654080cddbd2b082acaa74007cb94a2b40866
 - name: github.com/spf13/pflag
   version: 7f60f83a2c81bc3c3c0d5297f61ddfa68da9d3b7
+- name: github.com/spf13/viper
+  version: c975dc1b4eacf4ec7fdbf0873638de5d090ba323
 - name: golang.org/x/crypto
-  version: cc605d73cd25373226842461fa3727f4b8d5caf8
-  repo: https://github.com/AGWA-forks/golang-crypto
+  version: 5dc8cb4b8a8eb076cbb5a06bc3b8682c15bdbbd3
+  repo: https://github.com/golang/crypto.git
   vcs: git
   subpackages:
   - pkcs12
@@ -41,4 +68,8 @@ imports:
   version: 19ced1583f732e8ff9d7d84de773dc621557df99
   subpackages:
   - unix
+- name: gopkg.in/fsnotify.v1
+  version: 8611c35ab31c1c28aa903d33cf8b6e44a399b09e
+- name: gopkg.in/yaml.v2
+  version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
 devImports: []

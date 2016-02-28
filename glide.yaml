@@ -5,6 +5,7 @@ import:
   - arm/resources/resources
 - package: github.com/pborman/uuid
 - package: github.com/spf13/cobra
+- package: github.com/spf13/viper
 - package: github.com/Azure/go-autorest
   vcs: git
   repo: https://github.com/Azure/go-autorest
@@ -12,13 +13,6 @@ import:
   subpackages:
   - autorest
   - autorest/azure
-- package: golang.org/x/crypto
-  vcs: git
-  repo: https://github.com/AGWA-forks/golang-crypto
-  version: cc605d7
-  subpackages:
-  - /pkcs12
 - package: github.com/Sirupsen/logrus
   vcs: git
   repo: https://github.com/Sirupsen/logrus
-  version: 219c8cb75c258c552e999735be6df753ffc7afdc
