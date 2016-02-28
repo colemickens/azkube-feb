@@ -1,5 +1,5 @@
-hash: 3afa1300be706a43b78fa0d4d694ac264f982ef0fe7059f9a12f8d8682faf241
-updated: 2016-02-25T13:37:14.826850264-08:00
+hash: 694bce602fd9713f0a634cd6f19a3612a64ac4bdf3fb3b8ce8704f5e1b61b0ce
+updated: 2016-02-28T01:56:15.570037634-08:00
 imports:
 - name: github.com/Azure/azure-sdk-for-go
   version: 95361a2573b1fa92a00c5fc2707a80308483c6f9
@@ -7,8 +7,8 @@ imports:
   - arm/resources/resources
   - arm/authorization
 - name: github.com/Azure/go-autorest
-  version: e99aa70ca4753ebac9988c7b5fd06ea1f031480a
-  repo: https://github.com/colemickens/go-autorest
+  version: bebca455f60b24bf6a2459e9e862ff42da86f5e0
+  repo: https://github.com/Azure/go-autorest
   vcs: git
   subpackages:
   - autorest
@@ -17,8 +17,6 @@ imports:
   - autorest/date
 - name: github.com/dgrijalva/jwt-go
   version: f2193411bd642f7db03249fd79d5292c9b34916a
-- name: github.com/golang/glog
-  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/pborman/uuid
@@ -40,7 +38,7 @@ imports:
   - ssh
   - curve25519
 - name: golang.org/x/sys
-  version: 5eaf0df67e70d6997a9fe0ed24383fa1b01638d3
+  version: 19ced1583f732e8ff9d7d84de773dc621557df99
   subpackages:
   - unix
 devImports: []

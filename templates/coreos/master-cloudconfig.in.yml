@@ -7,86 +7,48 @@ write_files:
 - path: "/etc/kubernetes/azure.json"
   permissions: "0644"
   owner: "root"
-  encoding: "base64"
   content: |
-    {{.ConfigFile}}
+    {
+        "tenantId": "{{{tenantID}}}",
+        "subscriptionId": "[[[subscriptionId]]]",
+        "resourceGroup": "[[[resourceGroup]]]",
+        "servicePrincipalClientId": "{{{servicePrincipalClientId}}}",
+        "servicePrincipalClientSecret": "{{{servicePrincipalClientSecret}}}"
+    }
 
-- path: "/etc/kubernetes/manifests/master-components.yaml"
+- path: "/etc/kubernetes/ca.crt"
   permissions: "0644"
   owner: "root"
   content: |
-    {
-      "apiVersion": "v1",
-      "kind": "Pod",
-      "metadata": { "name": "k8s-master" },
-      "spec": {
-        "hostNetwork": true,
-        "containers": [
-          {
-            "name": "apiserver",
-            "image": "{{.HyperkubeContainerSpec}}",
-            "command": [
-              "/hyperkube",
-              "apiserver",
-              "--address=0.0.0.0",
-              "--allow-privileged",
-              "--insecure-port=8080",
-              "--secure-port=6443",
-              "--service-cluster-ip-range={{.ServiceCidr}}",
-              "--etcd-servers=http://127.0.0.1:4001",
-              "--cluster-name=kubernetes",
-              "--tls-cert-file=/etc/kubernetes/apiserver.crt",
-              "--tls-private-key-file=/etc/kubernetes/apiserver.key",
-              "--client-ca-file=/etc/kubernetes/ca.crt",
-              "--v=2"
-            ],
-            "volumeMounts": [ { "name": "etc-kubernetes", "mountPath": "/etc/kubernetes" } ]
-          },
-          {
-            "name": "controller-manager",
-            "image": "{{.HyperkubeContainerSpec}}",
-            "command": [
-              "/hyperkube",
-              "controller-manager",
-              "--kubeconfig=/etc/kubernetes/master-controller-manager-kubeconfig",
-              "--v=2"
-            ],
-            "volumeMounts": [ { "name": "etc-kubernetes", "mountPath": "/etc/kubernetes" } ]
-          },
-          {
-            "name": "scheduler",
-            "image": "{{.HyperkubeContainerSpec}}",
-            "command": [
-              "/hyperkube",
-              "scheduler",
-              "--kubeconfig=/etc/kubernetes/master-scheduler-kubeconfig",
-              "--v=2"
-            ],
-            "volumeMounts": [ { "name": "etc-kubernetes", "mountPath": "/etc/kubernetes" } ]
-          },
-          {
-            "name": "kube-proxy",
-            "image": "{{.HyperkubeContainerSpec}}",
-            "command": [
-              "/hyperkube",
-              "proxy",
-              "--kubeconfig=/etc/kubernetes/master-proxy-kubeconfig",
-              "--proxy-mode=iptables",
-              "--v=2"
-            ],
-            "securityContext": {
-              "privileged": true
-            },
-            "volumeMounts": [ { "name": "etc-kubernetes", "mountPath": "/etc/kubernetes" } ]
-          }
-        ],
-        "volumes": [ { "name": "etc-kubernetes", "hostPath": { "path": "/etc/kubernetes" } } ]
-      }
-    }
+    {{{caCertificate}}}
+
+- path: "/etc/kubernetes/apiserver.crt"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{apiserverCertificate}}}
+
+- path: "/etc/kubernetes/apiserver.key"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{apiserverPrivateKey}}}
+
+- path: "/etc/kubernetes/client.crt"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{clientCertificate}}}
+
+- path: "/etc/kubernetes/client.key"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{clientPrivateKey}}}
 
 coreos:
   etcd2:
-    advertise-client-urls: "http://{{.MasterPrivateIp}}:2379"
+    advertise-client-urls: "http://{{{masterFqdn}}:2379"
     listen-client-urls: "http://0.0.0.0:2379,http://0.0.0.0:4001"
   units:
     - name: "etcd2.service"

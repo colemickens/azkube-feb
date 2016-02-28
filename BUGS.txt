@@ -11,4 +11,4 @@ Possibly:
 
 adopt standard .gitignore
 
-could possibly do pki/ssh/create-app in parallel?
+consider moving the template files to go with backticks so we dont have to esacpe

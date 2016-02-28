@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"path"
 	"time"
@@ -55,7 +56,7 @@ func NewDeployCmd() *cobra.Command {
 func validateDeployArgs(deployArgs *util.DeployArguments) error {
 	validateRootArgs(rootArgs)
 
-	// TODO: validate location, esp since used for masterfqdn
+	// TODO: validate location + vmsizes, esp since used for masterfqdn
 
 	if deployArgs.DeploymentName == "" {
 		deployArgs.DeploymentName = fmt.Sprintf("kube-%s", time.Now().Format("20060102-150405"))
@@ -81,82 +82,186 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 		return err
 	}
 
-	// Ensure the Resource Group exists
-	_, err = d.EnsureResourceGroup(
-		deployArgs.ResourceGroup,
-		deployArgs.Location,
-		true)
-	if err != nil {
+	var (
+		appName, appURL, applicationID, servicePrincipalObjectID, servicePrincipalClientSecret string
+
+		sshPrivateKey      *rsa.PrivateKey
+		sshPublicKeyString string
+
+		ca, apiserver, client *util.PkiKeyCertPair
+	)
+
+	pkiLock := stepPki(d, deployArgs, ca, apiserver, client)
+	sshLock := stepSsh(d, deployArgs, sshPrivateKey, &sshPublicKeyString)
+
+	rgLock := stepRg(d, deployArgs)
+	if err = <-rgLock; err != nil {
 		return err
 	}
 
-	// Create the Active Directory application
-	appName := deployArgs.DeploymentName
-	appURL := fmt.Sprintf("https://%s/", deployArgs.DeploymentName)
-	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, err :=
-		d.AdClient.CreateApp(appName, appURL)
-	if err != nil {
+	adLock := stepAd(d, deployArgs, &applicationID, &servicePrincipalObjectID, &servicePrincipalClientSecret)
+	if err = <-adLock; err != nil {
+		return err
+	}
+	if err = <-pkiLock; err != nil {
+		return err
+	}
+	if err = <-sshLock; err != nil {
 		return err
 	}
 
-	// Create the role assignment for the App/ServicePrincipal
-	err = d.CreateRoleAssignment(rootArgs, deployArgs.ResourceGroup, servicePrincipalObjectID)
-	if err != nil {
+	_, _ = appName, appURL
+
+	deployLock := stepDeploy(d, deployArgs,
+		applicationID, servicePrincipalObjectID, servicePrincipalClientSecret,
+		sshPrivateKey, sshPublicKeyString,
+		ca, apiserver, client)
+
+	if err = <-deployLock; err != nil {
 		return err
 	}
 
-	// Create SSH key for deployment
-	sshPrivateKey, sshPublicKeyString, err := util.GenerateSsh(path.Join(deployArgs.OutputDirectory, "private.key"))
-
-	// Create PKI for deployment
-
-	masterFQDN := fmt.Sprintf("%s.%s.cloudapp.azure.com", deployArgs.DeploymentName, deployArgs.Location)
-
-	ca, apiserver, client, err :=
-		util.CreateKubeCertificates(masterFQDN, deployArgs.MasterExtraFQDNs)
-	if err != nil {
-		return fmt.Errorf("error occurred while creating kube certificates")
-	}
-
-	// TODO(colemick, consider): make a reserved ip for the kbue master TODO(colemick): for dns stability
-	flavorArgs := util.FlavorArguments{
-		DeploymentName: deployArgs.DeploymentName,
-
-		TenantID: rootArgs.TenantID,
-
-		MasterSize:       deployArgs.MasterSize,
-		NodeSize:         deployArgs.NodeSize,
-		NodeCount:        deployArgs.NodeCount,
-		Username:         deployArgs.Username,
-		SshPublicKeyData: sshPublicKeyString,
-
-		KubernetesReleaseURL: deployArgs.KubernetesReleaseURL, // TODO(parameterize this)
-
-		ServicePrincipalClientID:     applicationID,
-		ServicePrincipalClientSecret: servicePrincipalClientSecret,
-
-		MasterFQDN: masterFQDN,
-
-		CAKeyPair:        ca,
-		ApiserverKeyPair: apiserver,
-		ClientKeyPair:    client,
-	}
-
-	template, parameters, err := util.ProduceTemplateAndParameters(flavorArgs)
-	if err != nil {
-		return err
-	}
-
-	_, err = d.DoDeployment(
-		deployArgs.ResourceGroup,
-		"myriad",
-		template,
-		parameters,
-		true)
-	if err != nil {
-		return err
-	}
-
-	_ = sshPrivateKey
 	return nil
+}
+
+func stepRg(d *util.Deployer, deployArgs util.DeployArguments) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+
+		_, err = d.EnsureResourceGroup(
+			deployArgs.ResourceGroup,
+			deployArgs.Location,
+			true)
+		if err != nil {
+			return
+		}
+	}()
+
+	return c
+}
+
+func stepAd(d *util.Deployer, deployArgs util.DeployArguments,
+	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret *string) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+
+		appName := deployArgs.DeploymentName
+		appURL := fmt.Sprintf("https://%s/", deployArgs.DeploymentName)
+		*applicationID, *servicePrincipalObjectID, *servicePrincipalClientSecret, err =
+			d.AdClient.CreateApp(appName, appURL)
+		if err != nil {
+			return
+		}
+
+		err = d.CreateRoleAssignment(rootArgs, deployArgs.ResourceGroup, *servicePrincipalObjectID)
+		if err != nil {
+			return
+		}
+	}()
+
+	return c
+}
+
+func stepSsh(d *util.Deployer, deployArgs util.DeployArguments,
+	sshPrivateKey *rsa.PrivateKey, sshPublicKeyString *string) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+		sshPrivateKey, *sshPublicKeyString, err = util.GenerateSsh(path.Join(deployArgs.OutputDirectory, "private.key"))
+		if err != nil {
+			return
+		}
+	}()
+
+	return c
+}
+
+func stepPki(d *util.Deployer, deployArgs util.DeployArguments,
+	ca, apiserver, client *util.PkiKeyCertPair) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+		ca, apiserver, client, err =
+			util.CreateKubeCertificates(deployArgs.MasterFQDN, deployArgs.MasterExtraFQDNs)
+		if err != nil {
+			err = fmt.Errorf("error occurred while creating kube certificates")
+			return
+		}
+	}()
+	return c
+}
+
+func stepDeploy(d *util.Deployer, deployArgs util.DeployArguments,
+	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret string,
+	sshPrivateKey *rsa.PrivateKey, sshPublicKeyString string,
+	ca, apiserver, client *util.PkiKeyCertPair) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+
+		// TODO(colemick, consider): make a reserved ip for the kbue master TODO(colemick): for dns stability
+		flavorArgs := util.FlavorArguments{
+			DeploymentName: deployArgs.DeploymentName,
+
+			TenantID: rootArgs.TenantID,
+
+			MasterSize:       deployArgs.MasterSize,
+			NodeSize:         deployArgs.NodeSize,
+			NodeCount:        deployArgs.NodeCount,
+			Username:         deployArgs.Username,
+			SshPublicKeyData: sshPublicKeyString,
+
+			KubernetesReleaseURL: deployArgs.KubernetesReleaseURL,
+
+			ServicePrincipalClientID:     applicationID,
+			ServicePrincipalClientSecret: servicePrincipalClientSecret,
+
+			MasterFQDN: deployArgs.MasterFQDN,
+
+			CAKeyPair:        ca,
+			ApiserverKeyPair: apiserver,
+			ClientKeyPair:    client,
+		}
+
+		template, parameters, err := util.ProduceTemplateAndParameters(flavorArgs)
+		if err != nil {
+			return
+		}
+
+		_, err = d.DoDeployment(
+			deployArgs.ResourceGroup,
+			"myriad",
+			template,
+			parameters,
+			true)
+		if err != nil {
+			return
+		}
+
+		_ = sshPrivateKey
+		return
+	}()
+	return c
 }

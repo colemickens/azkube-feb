@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,8 +27,16 @@ const (
 
 	ServicePrincipalKeySize = 4096
 
-	AzurePropagationWaitDelay = time.Second * 30 // TODO(Colemickens): poll instead of dumb sleep
+	AzurePropagationWaitDelay = time.Second * 0 // TODO(Colemickens): poll instead of dumb sleep
 )
+
+var (
+	spMissingMessageRegexp *regexp.Regexp
+)
+
+func init() {
+	spMissingMessageRegexp = regexp.MustCompile(`Principal (.+) does not exist in the directory (.+)\.`)
+}
 
 type AdClient struct {
 	autorest.Client
@@ -188,14 +197,27 @@ func (d *Deployer) CreateRoleAssignment(rootArgs RootArguments, resourceGroup st
 		},
 	}
 
-	_, err := d.RoleAssignmentsClient.Create(
-		scope,
-		roleAssignmentName,
-		roleAssignmentParameters,
-	)
-	if err != nil {
-		log.Errorf("failed to create role assignment: %q", err)
-		return err
+	for {
+		_, err := d.RoleAssignmentsClient.Create(
+			scope,
+			roleAssignmentName,
+			roleAssignmentParameters,
+		)
+		if err != nil {
+			/*
+				TODO: fix when azure-sdk-for-go is regenerated
+				azureErr, ok := err.(*azure.DetailedError)
+				if ok && spMissingMessageRegexp.MatchString(azureErr.ServiceError.Message) {
+					log.Warnf("failed to create role assignment (will retry): %q", err)
+					continue
+				} else {
+					log.Errorf("failed to create role assignment: %q", err)
+					return err
+				}
+			*/
+			log.Warnf("failed to create role assignment (will retry): %q", err)
+		}
+		break
 	}
 
 	return nil
