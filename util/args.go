@@ -3,14 +3,25 @@ package util
 import ()
 
 type RootArguments struct {
-	TenantID              string
-	SubscriptionID        string
-	AuthMethod            string
-	ClientID              string
-	ClientSecret          string
-	ClientCertificatePath string
-	PrivateKeyPath        string
+	TenantID        string
+	SubscriptionID  string
+	AuthMethod      string
+	ClientID        string
+	ClientSecret    string
+	CertificatePath string
+	PrivateKeyPath  string
 }
+
+var RootArgNames = RootArguments{
+	TenantID:        "tenant-id",
+	SubscriptionID:  "subscription-id",
+	AuthMethod:      "auth-method",
+	ClientID:        "client-id",
+	ClientSecret:    "client-secret",
+	CertificatePath: "certificate-path",
+	PrivateKeyPath:  "private-key-path",
+}
+var rootArgNames = RootArgNames
 
 type DeployArguments struct {
 	OutputDirectory      string
@@ -19,12 +30,27 @@ type DeployArguments struct {
 	Location             string
 	MasterSize           string
 	NodeSize             string
-	NodeCount            int
+	NodeCount            string
 	Username             string
 	MasterFQDN           string
-	MasterExtraFQDNs     []string
+	MasterExtraFQDNs     string
 	KubernetesReleaseURL string
 }
+
+var DeployArgNames = DeployArguments{
+	OutputDirectory:      "output-directory",
+	DeploymentName:       "deployment-name",
+	ResourceGroup:        "resource-group",
+	Location:             "location",
+	MasterSize:           "master-size",
+	NodeSize:             "node-size",
+	NodeCount:            "node-count",
+	Username:             "username",
+	MasterFQDN:           "master-fqdn",
+	MasterExtraFQDNs:     "master-fqdns",
+	KubernetesReleaseURL: "kubernetes-release-url",
+}
+var deployArgNames = DeployArgNames
 
 // part of interface to flavors.
 // this is what flavors get.

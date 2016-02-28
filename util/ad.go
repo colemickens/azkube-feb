@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	log "github.com/Sirupsen/logrus"
 	"github.com/pborman/uuid"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -180,13 +181,13 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 	return applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, nil
 }
 
-func (d *Deployer) CreateRoleAssignment(rootArgs RootArguments, resourceGroup string, servicePrincipalObjectID string) error {
+func (d *Deployer) CreateRoleAssignment(resourceGroup string, servicePrincipalObjectID string) error {
 	roleAssignmentName := uuid.New()
 
-	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", rootArgs.SubscriptionID, -1)
+	roleDefinitionId := strings.Replace(AzureAdRoleReferenceTemplate, "{subscription-id}", viper.GetString(rootArgNames.SubscriptionID), -1)
 	roleDefinitionId = strings.Replace(roleDefinitionId, "{role-definition-id}", AzureAdAssignedRoleId, -1)
 
-	scope := fmt.Sprintf("subscriptions/%s/resourceGroups/%s", rootArgs.SubscriptionID, resourceGroup)
+	scope := fmt.Sprintf("subscriptions/%s/resourceGroups/%s", viper.GetString(rootArgNames.SubscriptionID), resourceGroup)
 
 	log.Infof("ad: creating role assignment for servicePrincipal (objectId=%q)", servicePrincipalObjectID)
 

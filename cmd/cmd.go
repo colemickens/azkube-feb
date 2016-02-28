@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/colemickens/azkube/util"
 	"github.com/spf13/cobra"
@@ -8,36 +10,39 @@ import (
 )
 
 const (
-	rootLongDescription = "azkube is a kubernetes deployment helper for Azure"
+	rootName             = "azkube"
+	rootShortDescription = "A Kubernetes deployment helper for Azure"
 )
 
-var rootArgs util.RootArguments
+var (
+	rootArgNames util.RootArguments = util.RootArgNames
+)
 
 func NewRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:   "azkube",
-		Short: rootLongDescription,
-		Long:  rootLongDescription,
+		Use:   rootName,
+		Short: rootShortDescription,
 	}
 
-	rootCmd.PersistentFlags().StringVar(&rootArgs.TenantID, "tenant-id", "", "azure subscription id")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.SubscriptionID, "subscription-id", "", "azure tenant id")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.AuthMethod, "auth-method", "device", "auth method (default:`device`, `clientsecret`, `clientcertificate`)")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientID, "client-id", "", "client id (used with --auth-method=[clientsecret|clientcertificate])")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientSecret, "client-secret", "", "client secret (used with --auth-mode=clientsecret)")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.ClientCertificatePath, "certificate-path", "", "path to client certificate (used with --auth-method=clientcertificate)")
-	rootCmd.PersistentFlags().StringVar(&rootArgs.PrivateKeyPath, "private-key-path", "", "path to private key (used with --auth-method=clientcertificate)")
+	pflags := rootCmd.PersistentFlags()
+	pflags.String(rootArgNames.TenantID, "", "azure tenant id")
+	pflags.String(rootArgNames.SubscriptionID, "", "azure subscription id")
+	pflags.String(rootArgNames.AuthMethod, "device", "auth method (default:`device`, `client_secret`, `client_certificate`)")
+	pflags.String(rootArgNames.ClientID, "", "client id (used with --auth-method=[client_secret|client_certificate])")
+	pflags.String(rootArgNames.ClientSecret, "", "client secret (used with --auth-mode=clientsecret)")
+	pflags.String(rootArgNames.CertificatePath, "", "path to client certificate (used with --auth-method=client_certificate)")
+	pflags.String(rootArgNames.PrivateKeyPath, "", "path to private key (used with --auth-method=client_certificate)")
 
-	viper.SetEnvPrefix("azkube_")
-	viper.BindEnv("tenant_id")
-	viper.BindEnv("subscription_id")
-	viper.BindEnv("client_secret")
-	viper.BindEnv("client_certificate_path")
-	viper.BindPFlag("tenant_id", rootCmd.PersistentFlags().Lookup("tenant-id"))
-	viper.BindPFlag("subscription_id", rootCmd.Flags().Lookup("subscription-id"))
-	viper.BindPFlag("client_id", rootCmd.PersistentFlags().Lookup("client-id"))
-	viper.BindPFlag("client_secret", rootCmd.PersistentFlags().Lookup("client-secret"))
-	viper.BindPFlag("client_certificate_path", rootCmd.PersistentFlags().Lookup("client-certificate-path"))
+	viper.SetEnvPrefix("azkube")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.BindPFlag(rootArgNames.TenantID, pflags.Lookup(rootArgNames.TenantID))
+	viper.BindPFlag(rootArgNames.SubscriptionID, pflags.Lookup(rootArgNames.SubscriptionID))
+	viper.BindPFlag(rootArgNames.AuthMethod, pflags.Lookup(rootArgNames.AuthMethod))
+	viper.BindPFlag(rootArgNames.ClientID, pflags.Lookup(rootArgNames.ClientID))
+	viper.BindPFlag(rootArgNames.ClientSecret, pflags.Lookup(rootArgNames.ClientSecret))
+	viper.BindPFlag(rootArgNames.CertificatePath, pflags.Lookup(rootArgNames.CertificatePath))
+	viper.BindPFlag(rootArgNames.PrivateKeyPath, pflags.Lookup(rootArgNames.PrivateKeyPath))
 
 	rootCmd.AddCommand(NewDeployCmd())
 	//rootCmd.AddCommand(NewScaleDeploymentCmd())
@@ -46,23 +51,23 @@ func NewRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func validateRootArgs(rootArgs util.RootArguments) {
-	if rootArgs.SubscriptionID == "" {
+func validateRootArgs() {
+	log.Warnf(viper.GetString("subscription-id"))
+	if viper.GetString(util.RootArgNames.SubscriptionID) == "" {
 		log.Fatal("--subscription-id must be specified")
 	}
 
-	if rootArgs.TenantID == "" {
+	if viper.GetString(rootArgNames.TenantID) == "" {
 		log.Fatal("--tenant-id must be specified")
 	}
 
-	if rootArgs.AuthMethod == "client-secret" {
-		if rootArgs.ClientID == "" || rootArgs.ClientSecret == "" {
+	if rootArgNames.AuthMethod == "client-secret" {
+		if viper.GetString(rootArgNames.ClientID) == "" || viper.GetString(rootArgNames.ClientSecret) == "" {
 			log.Fatal("--client-id and --client-secret must be specified when --auth-method=\"client_secret\"")
 		}
-	} else if rootArgs.AuthMethod == "client-certificate" {
-		if rootArgs.ClientID == "" || rootArgs.ClientCertificatePath == "" {
-			log.Fatal("--client-id and --client-certificate must be specified when --auth-method=\"client_certificate\"")
+	} else if rootArgNames.AuthMethod == "client-certificate" {
+		if viper.GetString(rootArgNames.ClientID) == "" || viper.GetString(rootArgNames.CertificatePath) == "" || viper.GetString(rootArgNames.PrivateKeyPath) == "" {
+			log.Fatal("--client-id and --certificate-path, and --private-key-path must be specified when --auth-method=\"client_certificate\"")
 		}
-
 	}
 }

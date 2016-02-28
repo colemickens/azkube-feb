@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -19,10 +20,8 @@ const (
 	AzureResourceManagerScope = "https://management.core.windows.net/"
 )
 
-func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
-	// rootArgs is validated by the caller
-
-	oauthConfig, err := azure.PublicCloud.OAuthConfigForTenant(rootArgs.TenantID)
+func NewDeployer() (*Deployer, error) {
+	oauthConfig, err := azure.PublicCloud.OAuthConfigForTenant(viper.GetString(rootArgNames.TenantID))
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +31,7 @@ func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
 	resource := AzureActiveDirectoryScope
 
 	var spt *azure.ServicePrincipalToken
-	switch rootArgs.AuthMethod {
+	switch viper.GetString(rootArgNames.AuthMethod) {
 	case "device":
 		deviceCode, err := azure.InitiateDeviceAuth(client, *oauthConfig, AzkubeClientID, resource)
 		if err != nil {
@@ -49,19 +48,19 @@ func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
 		}
 		spt.Token = *deviceToken
 
-	case "clientsecret":
-		spt, err = azure.NewServicePrincipalToken(*oauthConfig, rootArgs.ClientID, rootArgs.ClientSecret, resource)
+	case "client_secret":
+		spt, err = azure.NewServicePrincipalToken(*oauthConfig, viper.GetString(rootArgNames.ClientID), viper.GetString(rootArgNames.ClientSecret), resource)
 		if err != nil {
 			return nil, err
 		}
 
-	case "clientcertificate":
-		spt, err = newDeployerFromCertificate(*oauthConfig, rootArgs.SubscriptionID, rootArgs.ClientID, rootArgs.ClientCertificatePath, rootArgs.PrivateKeyPath, resource)
+	case "client_certificate":
+		spt, err = newDeployerFromCertificate(*oauthConfig, viper.GetString(rootArgNames.SubscriptionID), viper.GetString(rootArgNames.ClientID), viper.GetString(rootArgNames.CertificatePath), viper.GetString(rootArgNames.PrivateKeyPath), resource)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("The authentication method is unknown: %q", rootArgs.AuthMethod)
+		return nil, fmt.Errorf("The authentication method is unknown: %q", viper.GetString(rootArgNames.AuthMethod))
 	}
 
 	var resourcesScopeSpt azure.ServicePrincipalToken = *spt
@@ -77,10 +76,10 @@ func NewDeployerFromCmd(rootArgs RootArguments) (*Deployer, error) {
 	}
 
 	deployer := &Deployer{
-		DeploymentsClient:     resources.NewDeploymentsClient(rootArgs.SubscriptionID),
-		GroupsClient:          resources.NewGroupsClient(rootArgs.SubscriptionID),
-		RoleAssignmentsClient: authorization.NewRoleAssignmentsClient(rootArgs.SubscriptionID),
-		AdClient:              AdClient{Client: autorest.Client{}, TenantID: rootArgs.TenantID},
+		DeploymentsClient:     resources.NewDeploymentsClient(viper.GetString(rootArgNames.SubscriptionID)),
+		GroupsClient:          resources.NewGroupsClient(viper.GetString(rootArgNames.SubscriptionID)),
+		RoleAssignmentsClient: authorization.NewRoleAssignmentsClient(viper.GetString(rootArgNames.SubscriptionID)),
+		AdClient:              AdClient{Client: autorest.Client{}, TenantID: viper.GetString(rootArgNames.TenantID)},
 	}
 
 	deployer.DeploymentsClient.Authorizer = &resourcesScopeSpt
