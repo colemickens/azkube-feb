@@ -46,7 +46,8 @@ func NewDeployCmd() *cobra.Command {
 	flags.StringVar(&deployArgs.KubernetesReleaseURL, "kubernetes-release-url", kubernetesStableReleaseURL, "size of the node virtual machines")
 	flags.IntVar(&deployArgs.NodeCount, "node-count", 3, "initial number of node virtual machines")
 	flags.StringVar(&deployArgs.Username, "username", "kube", "username to virtual machines")
-	flags.StringSliceVar(&deployArgs.MasterExtraFQDNs, "master-extra-fqdns", []string{}, "comma delimited list of SANs for the master")
+	flags.StringVar(&deployArgs.MasterFQDN, "master-fqdn", "", "fqdn for master (used for PKI). calculated from cloudapp dns for master's public ip") // tODO is this wired up?
+	flags.StringSliceVar(&deployArgs.MasterExtraFQDNs, "master-extra-fqdns", []string{}, "comma delimited list of SANs for the master")               // tODO is this wired up?
 
 	return deployCmd
 }
@@ -64,6 +65,11 @@ func validateDeployArgs(deployArgs *util.DeployArguments) error {
 	if deployArgs.ResourceGroup == "" {
 		deployArgs.ResourceGroup = deployArgs.DeploymentName
 		log.Warnf("deployargs: --resource-group is unset, derived one from --deployment-name: %q", deployArgs.ResourceGroup)
+	}
+
+	if deployArgs.MasterFQDN == "" {
+		deployArgs.MasterFQDN = fmt.Sprintf("%s.%s.cloudapp.azure.com", deployArgs.DeploymentName, deployArgs.Location)
+		log.Warnf("deployargs: --master-fqdn is unset, derived from input: %q", deployArgs.MasterFQDN)
 	}
 
 	return nil
