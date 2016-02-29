@@ -1,13 +1,7 @@
-#FROM scratch
-#ADD azkube-deploy /opt/azkube-deploy/azkube-deploy
-#ADD templates     /opt/azkube-deploy/templates
-#WORKDIR           /opt/azkube-deploy
-#CMD ["/opt/azkube-deploy/azkube-deploy"]
+FROM     scratch
 
-# we'll switch back when cfssl is put in
+ADD      azkube      /opt/azkube/azkube
+ADD      templates   /opt/azkube/templates
 
-FROM ubuntu:15.10
-RUN bash -c "apt-get update; apt-get install openssl; apt-get autoclean"
-ADD azkube /opt/azkube/azkube
-ADD templates /opt/azkube/templates
-WORKDIR /opt/azkube
+WORKDIR  /opt/azkube
+CMD      [ "/opt/azkube/azkube" ]

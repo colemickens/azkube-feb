@@ -1,5 +1,11 @@
 .NOTPARALLEL:
 
+owner := colemickens
+projectname := azkube
+version := v0.0.1
+
+imagename := $(owner)/$(projectname):$(version)
+
 all: build
 
 glide:
@@ -11,12 +17,11 @@ build:
 	CGO_ENABLED=0 \
 	go build -a -tags netgo -installsuffix nocgo -ldflags '-w' .
 
-docker: build
-	docker build -t azkube .
+docker: clean build
+	docker build -t "$(imagename)" .
 
 docker-push: docker
-	docker tag -f azkube "colemickens/azkube:latest"
-	docker push "colemickens/azkube"
+	docker push "$(imagename)"
 
 clean:
-	rm azkube
+	rm -f azkube
