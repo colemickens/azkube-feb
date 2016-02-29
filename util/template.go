@@ -66,7 +66,6 @@ func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, paramet
 	nodeScript, _ := prepareScript(nodeScript)
 
 	log.Info("template: populating myriad parameters")
-	// TODO: consider, does this "list" become part of the flavor interface?
 	myriadParameters, err := populateTemplate(
 		myriadParametersTemplate,
 		flavorArgs)
@@ -81,9 +80,6 @@ func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, paramet
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: persist this to disk
-	log.Info("template: all done")
 
 	return myriadTemplate, myriadParameters, nil
 }

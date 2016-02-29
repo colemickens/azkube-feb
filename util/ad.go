@@ -211,7 +211,7 @@ func (d *Deployer) CreateRoleAssignment(resourceGroup string, servicePrincipalOb
 				}
 			*/
 			log.Warnf("ad: failed to create role assignment (will retry): %q", err)
-			time.Sleep(1 * time.Second)
+			time.Sleep(3 * time.Second)
 			continue
 		}
 		break

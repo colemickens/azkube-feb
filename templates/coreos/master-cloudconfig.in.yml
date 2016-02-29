@@ -65,7 +65,7 @@ write_files:
     - name: client
       user:
         client-certificate: /etc/kubernetes/certs/client.crt
-        client-key: /etc/kubernetes/certs/client.pem
+        client-key: /etc/kubernetes/certs/client.key
     contexts:
     - context:
         cluster: localcluster
@@ -73,7 +73,7 @@ write_files:
       name: localclustercontext
     current-context: localclustercontext
 
-- path: /etc/kubernetes/manifests/master/master.yaml
+- path: /etc/kubernetes/manifests/master.yaml
   permissions: "0644"
   owner: "root"
   content: |
@@ -91,7 +91,7 @@ write_files:
               - "apiserver"
               - "--address=0.0.0.0"
               - "--allow-privileged"
-              - "--insecure-port=0"
+              - "--insecure-port=8080"
               - "--secure-port=6443"
               - "--service-cluster-ip-range=[[[kubeServiceCidr]]]"
               - "--etcd-servers=http://127.0.0.1:4001"
@@ -110,7 +110,7 @@ write_files:
             command: 
               - "/hyperkube"
               - "controller-manager"
-              - "--kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
+              - "--kubeconfig=/var/lib/kubelet/kubeconfig"
               - "--v=2"
             volumeMounts: 
               - name: "etc-kubernetes"
@@ -122,7 +122,7 @@ write_files:
             command:
               - "/hyperkube"
               - "scheduler"
-              - "--kubeconfig=/var/lib/kube-scheduler/kubeconfig"
+              - "--kubeconfig=/var/lib/kubelet/kubeconfig"
               - "--v=2"
             volumeMounts:
               - name: "etc-kubernetes"
@@ -134,7 +134,7 @@ write_files:
             command: 
               - "/hyperkube"
               - "proxy"
-              - "--kubeconfig=/var/lib/kubeproxy/kubeconfig"
+              - "--kubeconfig=/var/lib/kubelet/kubeconfig"
               - "--proxy-mode=iptables"
               - "--v=2"
             securityContext:

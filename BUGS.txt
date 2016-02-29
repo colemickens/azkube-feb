@@ -12,3 +12,10 @@ Possibly:
 adopt standard .gitignore
 
 consider moving the template files to go with backticks so we dont have to esacpe
+
+
+kube-controller-manager doesn't respect kubeconfig
+
+
+node scaleset should not need to wait on the master, if we can fix this, we can probably cut down on deploy time a good deal
+ - the reason it's like this is becasue sometimes the privateIp is not respected (aka, another azure bug)
