@@ -3,7 +3,6 @@ package cmd
 import (
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -18,6 +17,7 @@ const (
 	deployLongDescription = "creates a new kubernetes cluster in Azure"
 
 	kubernetesStableReleaseURL = "https://github.com/kubernetes/kubernetes/releases/download/v1.1.8/kubernetes.tar.gz"
+	kubernetesHyperkubeSpec    = "gcr.io/google_containers/hyperkube-amd64:v1.2.0-alpha.8"
 )
 
 var (
@@ -52,7 +52,8 @@ func NewDeployCmd() *cobra.Command {
 	flags.String(deployArgNames.MasterSize, "Standard_A1", "size of the master virtual machine")
 	flags.String(deployArgNames.NodeSize, "Standard_A1", "size of the node virtual machines")
 	flags.Int(deployArgNames.NodeCount, 3, "initial number of node virtual machines")
-	flags.String(deployArgNames.KubernetesReleaseURL, kubernetesStableReleaseURL, "size of the node virtual machines")
+	flags.String(deployArgNames.KubernetesReleaseURL, kubernetesStableReleaseURL, "url to kubernetes release tarball (not used yet)")
+	flags.String(deployArgNames.KubernetesHyperkubeSpec, kubernetesHyperkubeSpec, "docker spec for hyperkube container to use")
 	flags.String(deployArgNames.Username, "kube", "username to virtual machines")
 	flags.String(deployArgNames.MasterFQDN, "", "fqdn for master (used for PKI). calculated from cloudapp dns for master's public ip") // tODO is this wired up?
 	flags.StringSlice(deployArgNames.MasterExtraFQDNs, []string{}, "comma delimited list of SANs for the master")                      // tODO is this wired up?
@@ -65,6 +66,7 @@ func NewDeployCmd() *cobra.Command {
 	viper.BindPFlag(deployArgNames.NodeSize, flags.Lookup(deployArgNames.NodeSize))
 	viper.BindPFlag(deployArgNames.NodeCount, flags.Lookup(deployArgNames.NodeCount))
 	viper.BindPFlag(deployArgNames.KubernetesReleaseURL, flags.Lookup(deployArgNames.KubernetesReleaseURL))
+	viper.BindPFlag(deployArgNames.KubernetesHyperkubeSpec, flags.Lookup(deployArgNames.KubernetesHyperkubeSpec))
 	viper.BindPFlag(deployArgNames.Username, flags.Lookup(deployArgNames.Username))
 	viper.BindPFlag(deployArgNames.MasterFQDN, flags.Lookup(deployArgNames.MasterFQDN))
 	viper.BindPFlag(deployArgNames.MasterExtraFQDNs, flags.Lookup(deployArgNames.MasterExtraFQDNs))
@@ -91,7 +93,7 @@ func validateDeployArgs(deployArgs *util.DeployArguments) error {
 		viper.Set(deployArgNames.OutputDirectory, path.Join(wd, "_deployments", viper.GetString(deployArgNames.DeploymentName)))
 		log.Warnf("deployargs: --output-directory is unset, using this location: %q", viper.GetString(deployArgNames.OutputDirectory))
 
-		err = os.MkdirAll(deployArgNames.OutputDirectory, 0644)
+		err = os.MkdirAll(viper.GetString(deployArgNames.OutputDirectory), 0700)
 		if err != nil {
 			log.Fatalf("unable to create output directory for deployment: %q", err)
 		}
@@ -154,6 +156,10 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 	if err = <-deployLock; err != nil {
 		return err
 	}
+
+	log.Infof("Deployment Complete!")
+	log.Infof("Master is at: %q", viper.GetString(deployArgNames.MasterFQDN))
+	log.Infof("ssh -i %s/%s_rsa %s@%s", viper.GetString(deployArgNames.OutputDirectory), viper.GetString(deployArgNames.Username), viper.GetString(deployArgNames.Username), viper.GetString(deployArgNames.MasterFQDN))
 
 	return nil
 }
@@ -221,7 +227,7 @@ func stepSsh(d *util.Deployer, deployArgs util.DeployArguments,
 		}
 
 		privateKeyPem := util.PrivateKeyToPem(*sshPrivateKey)
-		err = ioutil.WriteFile(path.Join(viper.GetString(deployArgNames.OutputDirectory), "kube_rsa"), []byte(privateKeyPem), 0600)
+		err = util.SaveDeploymentFile(fmt.Sprintf("%s_rsa", viper.GetString(deployArgNames.Username)), string(privateKeyPem), 0600)
 		if err != nil {
 			return
 		}
@@ -241,9 +247,33 @@ func stepPki(d *util.Deployer, deployArgs util.DeployArguments,
 		}()
 		*ca, *apiserver, *client, err =
 			util.CreateKubeCertificates(viper.GetString(deployArgNames.MasterFQDN), viper.GetStringSlice(deployArgNames.MasterExtraFQDNs))
-		log.Warnf("done")
 		if err != nil {
 			err = fmt.Errorf("error occurred while creating kube certificates")
+			return
+		}
+
+		err = util.SaveDeploymentFile("ca.key", (*ca).PrivateKeyPem, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("ca.crt", (*ca).CertificatePem, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("apiserver.key", (*apiserver).PrivateKeyPem, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("apiserver.crt", (*apiserver).CertificatePem, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("client.key", (*client).PrivateKeyPem, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("client.crt", (*client).CertificatePem, 0600)
+		if err != nil {
 			return
 		}
 	}()
@@ -274,7 +304,8 @@ func stepDeploy(d *util.Deployer, deployArgs util.DeployArguments,
 			Username:         viper.GetString(deployArgNames.Username),
 			SshPublicKeyData: sshPublicKeyString,
 
-			KubernetesReleaseURL: viper.GetString(deployArgNames.KubernetesReleaseURL),
+			KubernetesReleaseURL:    viper.GetString(deployArgNames.KubernetesReleaseURL),
+			KubernetesHyperkubeSpec: viper.GetString(deployArgNames.KubernetesHyperkubeSpec),
 
 			ServicePrincipalClientID:     applicationID,
 			ServicePrincipalClientSecret: servicePrincipalClientSecret,
@@ -287,6 +318,15 @@ func stepDeploy(d *util.Deployer, deployArgs util.DeployArguments,
 		}
 
 		template, parameters, err := util.ProduceTemplateAndParameters(flavorArgs)
+		if err != nil {
+			return
+		}
+
+		err = util.SaveDeploymentMap("azdeploy.json", template, 0600)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentMap("parameters.json", parameters, 0600)
 		if err != nil {
 			return
 		}

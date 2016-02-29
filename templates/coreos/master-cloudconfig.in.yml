@@ -11,37 +11,42 @@ write_files:
     {
         "tenantId": "{{{tenantID}}}",
         "subscriptionId": "[[[subscriptionId]]]",
-        "resourceGroup": "[[[resourceGroup]]]",
+        "resourceGroup": "[[[resourceGrou{{{kubernetesHyperkubeSpec}}}]",
         "servicePrincipalClientId": "{{{servicePrincipalClientId}}}",
         "servicePrincipalClientSecret": "{{{servicePrincipalClientSecret}}}"
     }
 
 - path: "/etc/kubernetes/certs/ca.crt"
   permissions: "0644"
+  encoding: "base64"
   owner: "root"
   content: |
     {{{caCertificate}}}
 
 - path: "/etc/kubernetes/certs/apiserver.crt"
   permissions: "0644"
+  encoding: "base64"
   owner: "root"
   content: |
     {{{apiserverCertificate}}}
 
 - path: "/etc/kubernetes/certs/apiserver.key"
   permissions: "0644"
+  encoding: "base64"
   owner: "root"
   content: |
     {{{apiserverPrivateKey}}}
 
 - path: "/etc/kubernetes/certs/client.crt"
   permissions: "0644"
+  encoding: "base64"
   owner: "root"
   content: |
     {{{clientCertificate}}}
 
 - path: "/etc/kubernetes/certs/client.key"
   permissions: "0644"
+  encoding: "base64"
   owner: "root"
   content: |
     {{{clientPrivateKey}}}
@@ -80,7 +85,7 @@ write_files:
         hostNetwork: true
         containers:
           - name: "kube-apiserver"
-            image: "[[[kubeHyperkubeSpec]]]"
+            image: "{{{kubernetesHyperkubeSpec}}}"
             command: 
               - "/hyperkube"
               - "apiserver"
@@ -101,7 +106,7 @@ write_files:
               - name: "var-lib-kubelet"
                 mountPath: "/var/lib/kubelet"
           - name: "kube-controller-manager"
-            image: "[[[kubeHyperkubeSpec]]]"
+            image: "{{{kubernetesHyperkubeSpec}}}"
             command: 
               - "/hyperkube"
               - "controller-manager"
@@ -113,7 +118,7 @@ write_files:
               - name: "var-lib-kubelet"
                 mountPath: "/var/lib/kubelet"
           - name: "kube-scheduler"
-            image: "[[[kubeHyperkubeSpec]]]"
+            image: "{{{kubernetesHyperkubeSpec}}}"
             command:
               - "/hyperkube"
               - "scheduler"
@@ -125,7 +130,7 @@ write_files:
               - name: "var-lib-kubelet"
                 mountPath: "/var/lib/kubelet"
           - name: "kube-proxy"
-            image: "[[[kubeHyperkubeSpec]]]"
+            image: "{{{kubernetesHyperkubeSpec}}}"
             command: 
               - "/hyperkube"
               - "proxy"
@@ -149,7 +154,7 @@ write_files:
 
 coreos:
   etcd2:
-    advertise-client-urls: "http://{{{masterFqdn}}:2379"
+    advertise-client-urls: "http://127.0.0.1:2379,http://[[[masterPrivateIp]]]:2379,http://{{{masterFqdn}}}:2379"
     listen-client-urls: "http://0.0.0.0:2379,http://0.0.0.0:4001"
   units:
     - name: "etcd2.service"
@@ -170,7 +175,6 @@ coreos:
         Description=Kubelet
         Requires=docker.service
         Requires=flanneld.service
-        Requires=ensure-secrets.service
         After=docker.service
         After=flanneld.service
 
@@ -186,7 +190,7 @@ coreos:
           -v /var/lib/docker/:/var/lib/docker:ro \
           -v /etc/kubernetes/:/etc/kubernetes/:rw \
           -v /var/lib/kubelet/:/var/lib/kubelet:rw \
-            [[[kubeHyperkubeSpec]]] \
+            {{{kubernetesHyperkubeSpec}}} \
               /hyperkube kubelet \
                 --containerized \
                 --api-servers="https://{{{masterFqdn}}}:6443" \
@@ -195,7 +199,7 @@ coreos:
                 --allow-privileged=true \
                 --enable-server \
                 --config=/etc/kubernetes/manifests \
-                --cluster-dns=[[[kubeDnsServiceIp]]]\
+                --cluster-dns=[[[kubeDnsServiceIP]]] \
                 --cluster-domain=cluster.local \
                 --register-node=false \
                 --v=2

@@ -75,6 +75,12 @@
 		"kubernetesReleaseUrl": {
 			"type": "string",
 			"metadata": {
+				"description": "release url for kubernetes tarball"
+			}
+		},
+		"kubernetesHyperkubeSpec": {
+			"type": "string",
+			"metadata": {
 				"description": "container spec for hyperkube"
 			}
 		},
@@ -115,7 +121,7 @@
 	"variables": {
 		"azureApiVersion": "2015-05-01-preview",
 
-		"vmNamePrefix": "[concat(parameters('deploymentName'), '-vm')]",
+		"vmNamePrefix": "[concat(parameters('deploymentName'), '-vm-')]",
 
 		"location": "[resourceGroup().location]",
 		"subscriptionId": "[subscription().id]",
@@ -139,9 +145,8 @@
 		"kubeServiceCidr": "10.3.0.0/24",
 		"kubeApiServiceIp": "10.3.0.1",
 		"kubeDnsServiceIp": "10.3.0.10",
-		"kubeHyperkubeSpec": "google_containers/hyperkube:v1.1.8",
 
-		"storageAccountName": "[replace(concat(resourceGroup().name, 'strg'),'-','')]",
+		"storageAccountName": "[replace(concat(parameters('deploymentName'), 'strg'),'-','')]",
 		"storageContainerName": "kube-vm-disks",
 		"storageAccountType": "Standard_LRS",
 
@@ -206,7 +211,7 @@
 			"properties": {
 				"publicIPAllocationMethod": "Dynamic",
 				"dnsSettings": {
-					"domainNameLabel": "[concat(resourceGroup().name, '-master')]"
+					"domainNameLabel": "[parameters('deploymentName')]"
 				}
 			}
 		},

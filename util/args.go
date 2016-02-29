@@ -24,31 +24,33 @@ var RootArgNames = RootArguments{
 var rootArgNames = RootArgNames
 
 type DeployArguments struct {
-	OutputDirectory      string
-	DeploymentName       string
-	ResourceGroup        string
-	Location             string
-	MasterSize           string
-	NodeSize             string
-	NodeCount            string
-	Username             string
-	MasterFQDN           string
-	MasterExtraFQDNs     string
-	KubernetesReleaseURL string
+	OutputDirectory         string
+	DeploymentName          string
+	ResourceGroup           string
+	Location                string
+	MasterSize              string
+	NodeSize                string
+	NodeCount               string
+	Username                string
+	MasterFQDN              string
+	MasterExtraFQDNs        string
+	KubernetesReleaseURL    string
+	KubernetesHyperkubeSpec string
 }
 
 var DeployArgNames = DeployArguments{
-	OutputDirectory:      "output-directory",
-	DeploymentName:       "deployment-name",
-	ResourceGroup:        "resource-group",
-	Location:             "location",
-	MasterSize:           "master-size",
-	NodeSize:             "node-size",
-	NodeCount:            "node-count",
-	Username:             "username",
-	MasterFQDN:           "master-fqdn",
-	MasterExtraFQDNs:     "master-fqdns",
-	KubernetesReleaseURL: "kubernetes-release-url",
+	OutputDirectory:         "output-directory",
+	DeploymentName:          "deployment-name",
+	ResourceGroup:           "resource-group",
+	Location:                "location",
+	MasterSize:              "master-size",
+	NodeSize:                "node-size",
+	NodeCount:               "node-count",
+	Username:                "username",
+	MasterFQDN:              "master-fqdn",
+	MasterExtraFQDNs:        "master-fqdns",
+	KubernetesReleaseURL:    "kubernetes-release-url",
+	KubernetesHyperkubeSpec: "kubernetes-hyperkube-spec",
 }
 var deployArgNames = DeployArgNames
 
@@ -71,7 +73,8 @@ type FlavorArguments struct {
 
 	MasterFQDN string
 
-	KubernetesReleaseURL string
+	KubernetesReleaseURL    string
+	KubernetesHyperkubeSpec string
 
 	CAKeyPair        *PkiKeyCertPair
 	ApiserverKeyPair *PkiKeyCertPair

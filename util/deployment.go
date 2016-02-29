@@ -2,10 +2,10 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/arm/resources/resources"
+	log "github.com/Sirupsen/logrus"
 )
 
 func (d *Deployer) DoDeployment(resourceGroupName, deploymentName string, template map[string]interface{}, parameters map[string]interface{}, waitDeployment bool) (response *resources.DeploymentExtended, err error) {
@@ -37,6 +37,7 @@ func (d *Deployer) DoDeployment(resourceGroupName, deploymentName string, templa
 func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resources.DeploymentExtended, error) {
 	var err error
 	var response resources.DeploymentExtended
+	var infoUpdateCount int = 0
 	for {
 		time.Sleep(5 * time.Second)
 
@@ -48,16 +49,21 @@ func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resour
 		state := response.Properties.ProvisioningState
 
 		if state == nil || *state == "Accepted" || *state == "Running" {
+			infoUpdateCount++
+			if infoUpdateCount >= 6 {
+				infoUpdateCount = 0
+				log.Infof("deployment: %q deployment in progress. state=%q", deploymentName, *state)
+			}
 			continue
 		}
 
 		if *state == "Succeeded" {
-			log.Println(deploymentName + " deployment succeeded!")
+			log.Infof("deployment: %q deployment succeeded!", deploymentName)
 			return &response, nil
 		} else if *state == "Failed" {
-			return &response, fmt.Errorf(deploymentName + " deployment failed!")
+			return &response, fmt.Errorf("deployment: %q deployment failed!", deploymentName)
 		} else {
-			return &response, fmt.Errorf(deploymentName+" deployment went into unknown state: %s", *state)
+			return &response, fmt.Errorf("deployment: %q deployment went into unknown state: %s", deploymentName, *state)
 		}
 	}
 

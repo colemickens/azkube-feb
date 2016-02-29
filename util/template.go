@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +22,10 @@ var (
 	variableRegex  = regexp.MustCompile(`\[\[\[([a-zA-Z]+)\]\]\]`)
 	parameterRegex = regexp.MustCompile(`\{\{\{([a-zA-Z]+)\}\}\}`)
 )
+
+func b64(s string) string {
+	return base64.URLEncoding.EncodeToString([]byte(s))
+}
 
 func init() {
 	mustRead := func(f string) string {
@@ -44,10 +49,13 @@ func init() {
 	}
 
 	myriadParametersTemplate, err =
-		template.New("myriadParameters").Parse(mustRead("templates/coreos/parameters.in.json"))
+		template.New("myriadParameters").
+			Funcs(template.FuncMap{"b64": b64}).
+			Parse(mustRead("templates/coreos/parameters.in.json"))
 	if err != nil {
 		panic(err)
 	}
+
 }
 
 func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, parameters map[string]interface{}, err error) {
@@ -99,20 +107,10 @@ func populateTemplate(t *template.Template, state interface{}) (template map[str
 	var myriadBuf bytes.Buffer
 	var myriadMap map[string]interface{}
 
-	if t == nil {
-		log.Fatal("Nil!!!")
-	}
-
 	err = t.Execute(&myriadBuf, state)
 	if err != nil {
 		return nil, fmt.Errorf("template: failed to execute template: %q", err)
 	}
-
-	err = ioutil.WriteFile(fmt.Sprintf("/home/cole/%s.txt", t.Name()), myriadBuf.Bytes(), 0666)
-	if err != nil {
-		panic(err)
-	}
-	log.Info("looggeeeeeeeeeeeed it")
 
 	err = json.Unmarshal(myriadBuf.Bytes(), &myriadMap)
 	if err != nil {
