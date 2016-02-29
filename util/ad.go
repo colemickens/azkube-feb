@@ -27,8 +27,6 @@ const (
 	AzureAdAssignedRoleId        = AzureAdOwnerRoleId
 
 	ServicePrincipalKeySize = 4096
-
-	AzurePropagationWaitDelay = time.Second * 0 // TODO(Colemickens): poll instead of dumb sleep
 )
 
 var (
@@ -136,8 +134,6 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 
 	applicationID = applicationResp.ApplicationID
 
-	time.Sleep(AzurePropagationWaitDelay) // TODO(colemick): not great, or even good
-
 	servicePrincipalReq := AdServicePrincipal{
 		ApplicationID:  applicationID,
 		AccountEnabled: true,
@@ -175,8 +171,6 @@ func (a *AdClient) CreateApp(appName, appURL string) (applicationID, servicePrin
 	}
 
 	servicePrincipalObjectID = servicePrincipalResp.ObjectID
-
-	time.Sleep(AzurePropagationWaitDelay)
 
 	return applicationID, servicePrincipalObjectID, servicePrincipalClientSecret, nil
 }
@@ -217,6 +211,8 @@ func (d *Deployer) CreateRoleAssignment(resourceGroup string, servicePrincipalOb
 				}
 			*/
 			log.Warnf("failed to create role assignment (will retry): %q", err)
+			time.Sleep(1 * time.Second)
+			continue
 		}
 		break
 	}

@@ -3,6 +3,8 @@ package cmd
 import (
 	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
@@ -78,6 +80,21 @@ func validateDeployArgs(deployArgs *util.DeployArguments) error {
 	if viper.GetString(deployArgNames.DeploymentName) == "" {
 		viper.Set(deployArgNames.DeploymentName, fmt.Sprintf("kube-%s", time.Now().Format("20060102-150405")))
 		log.Warnf("deployargs: --deployment-name is unset, generated a random deployment name: %q", viper.GetString(deployArgNames.DeploymentName))
+	}
+
+	if viper.GetString(deployArgNames.OutputDirectory) == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("unable to get working directory for output")
+		}
+
+		viper.Set(deployArgNames.OutputDirectory, path.Join(wd, "_deployments", viper.GetString(deployArgNames.DeploymentName)))
+		log.Warnf("deployargs: --output-directory is unset, using this location: %q", viper.GetString(deployArgNames.OutputDirectory))
+
+		err = os.MkdirAll(deployArgNames.OutputDirectory, 0644)
+		if err != nil {
+			log.Fatalf("unable to create output directory for deployment: %q", err)
+		}
 	}
 
 	if viper.GetString(deployArgNames.ResourceGroup) == "" {
@@ -199,6 +216,12 @@ func stepSsh(d *util.Deployer, deployArgs util.DeployArguments,
 			c <- err
 		}()
 		*sshPrivateKey, *sshPublicKeyString, err = util.GenerateSsh(path.Join(viper.GetString(deployArgNames.OutputDirectory), "private.key"))
+		if err != nil {
+			return
+		}
+
+		privateKeyPem := util.PrivateKeyToPem(*sshPrivateKey)
+		err = ioutil.WriteFile(path.Join(viper.GetString(deployArgNames.OutputDirectory), "kube_rsa"), []byte(privateKeyPem), 0600)
 		if err != nil {
 			return
 		}

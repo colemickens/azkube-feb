@@ -1,10 +1,10 @@
 #cloud-config
 
-[[[var]]]
-{{{param}}}
+# [ [ [ var ] ] ]
+# { { { param } } }
 
 write_files:
-- path: "/etc/kubernetes/azure.json"
+- path: "/etc/kubernetes/azure/auth.json"
   permissions: "0644"
   owner: "root"
   content: |
@@ -16,35 +16,136 @@ write_files:
         "servicePrincipalClientSecret": "{{{servicePrincipalClientSecret}}}"
     }
 
-- path: "/etc/kubernetes/ca.crt"
+- path: "/etc/kubernetes/certs/ca.crt"
   permissions: "0644"
   owner: "root"
   content: |
     {{{caCertificate}}}
 
-- path: "/etc/kubernetes/apiserver.crt"
+- path: "/etc/kubernetes/certs/apiserver.crt"
   permissions: "0644"
   owner: "root"
   content: |
     {{{apiserverCertificate}}}
 
-- path: "/etc/kubernetes/apiserver.key"
+- path: "/etc/kubernetes/certs/apiserver.key"
   permissions: "0644"
   owner: "root"
   content: |
     {{{apiserverPrivateKey}}}
 
-- path: "/etc/kubernetes/client.crt"
+- path: "/etc/kubernetes/certs/client.crt"
   permissions: "0644"
   owner: "root"
   content: |
     {{{clientCertificate}}}
 
-- path: "/etc/kubernetes/client.key"
+- path: "/etc/kubernetes/certs/client.key"
   permissions: "0644"
   owner: "root"
   content: |
     {{{clientPrivateKey}}}
+
+- path: "/var/lib/kubelet/kubeconfig"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - name: localcluster
+      cluster:
+        certificate-authority: /etc/kubernetes/certs/ca.crt
+    users:
+    - name: client
+      user:
+        client-certificate: /etc/kubernetes/certs/client.crt
+        client-key: /etc/kubernetes/certs/client.pem
+    contexts:
+    - context:
+        cluster: localcluster
+        user: client
+      name: localclustercontext
+    current-context: localclustercontext
+
+- path: /etc/kubernetes/manifests/master/master.yaml
+  permissions: "0644"
+  owner: "root"
+  content: |
+      apiVersion: "v1"
+      kind: "Pod"
+      metadata:
+        name: "k8s-master"
+      spec:
+        hostNetwork: true
+        containers:
+          - name: "kube-apiserver"
+            image: "[[[kubeHyperkubeSpec]]]"
+            command: 
+              - "/hyperkube"
+              - "apiserver"
+              - "--address=0.0.0.0"
+              - "--allow-privileged"
+              - "--insecure-port=0"
+              - "--secure-port=6443"
+              - "--service-cluster-ip-range=[[[kubeServiceCidr]]]"
+              - "--etcd-servers=http://127.0.0.1:4001"
+              - "--cluster-name=kubernetes"
+              - "--tls-cert-file=/etc/kubernetes/certs/apiserver.crt"
+              - "--tls-private-key-file=/etc/kubernetes/certs/apiserver.key"
+              - "--client-ca-file=/etc/kubernetes/certs/ca.crt"
+              - "--v=2"
+            volumeMounts: 
+              - name: "etc-kubernetes"
+                mountPath: "/etc/kubernetes"
+              - name: "var-lib-kubelet"
+                mountPath: "/var/lib/kubelet"
+          - name: "kube-controller-manager"
+            image: "[[[kubeHyperkubeSpec]]]"
+            command: 
+              - "/hyperkube"
+              - "controller-manager"
+              - "--kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
+              - "--v=2"
+            volumeMounts: 
+              - name: "etc-kubernetes"
+                mountPath: "/etc/kubernetes"
+              - name: "var-lib-kubelet"
+                mountPath: "/var/lib/kubelet"
+          - name: "kube-scheduler"
+            image: "[[[kubeHyperkubeSpec]]]"
+            command:
+              - "/hyperkube"
+              - "scheduler"
+              - "--kubeconfig=/var/lib/kube-scheduler/kubeconfig"
+              - "--v=2"
+            volumeMounts:
+              - name: "etc-kubernetes"
+                mountPath: "/etc/kubernetes"
+              - name: "var-lib-kubelet"
+                mountPath: "/var/lib/kubelet"
+          - name: "kube-proxy"
+            image: "[[[kubeHyperkubeSpec]]]"
+            command: 
+              - "/hyperkube"
+              - "proxy"
+              - "--kubeconfig=/var/lib/kubeproxy/kubeconfig"
+              - "--proxy-mode=iptables"
+              - "--v=2"
+            securityContext:
+              privileged: true
+            volumeMounts:
+              - name: "etc-kubernetes"
+                mountPath: "/etc/kubernetes"
+              - name: "var-lib-kubelet"
+                mountPath: "/var/lib/kubelet"
+        volumes: 
+          - name: "etc-kubernetes"
+            hostPath:
+              path: "/etc/kubernetes"
+          - name: "var-lib-kubelet"
+            hostPath:
+              path: "/var/lib/kubelet"
 
 coreos:
   etcd2:
@@ -58,7 +159,7 @@ coreos:
         - name: 50-network-config.conf
           content: |
             [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config "{ \"Network\": \"{{.PodCidr}}\" }"
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config "{ \"Network\": \"[[[kubePodCidr]]]\" }"
       command: "start"
     - name: "docker.service"
       command: "start"
@@ -72,50 +173,30 @@ coreos:
         Requires=ensure-secrets.service
         After=docker.service
         After=flanneld.service
-        After=ensure-secrets.service
 
         [Service]
         Restart=always
         ExecStart=/usr/bin/docker run \
-                    --net=host \
-                    --privileged \
-                    -v /sys:/sys:ro \
-                    -v /var/run:/var/run:rw \
-                    -v /:/rootfs:ro \
-                    -v /dev:/dev \
-                    -v /var/lib/docker/:/var/lib/docker:ro \
-                    -v /var/lib/kubelet/:/var/lib/kubelet:rw \
-                    -v /etc/kubernetes/:/etc/kubernetes/:rw \
-                    {{.HyperkubeContainerSpec}} \
-                      /hyperkube kubelet \
-                        --containerized \
-                        --api-servers=https://{{.MasterFQDN}}:6443 \
-                        --kubeconfig=/etc/kubernetes/master-kubelet-kubeconfig \
-                        --address=0.0.0.0 \
-                        --allow-privileged=true \
-                        --enable-server \
-                        --config=/etc/kubernetes/manifests \
-                        --cluster-dns={{.DnsServiceIp}}\
-                        --cluster-domain=cluster.local \
-                        --register-node=false \
-                        --v=2
+          --net=host \
+          --privileged \
+          -v /sys:/sys:ro \
+          -v /var/run:/var/run:rw \
+          -v /:/rootfs:ro \
+          -v /dev:/dev \
+          -v /var/lib/docker/:/var/lib/docker:ro \
+          -v /etc/kubernetes/:/etc/kubernetes/:rw \
+          -v /var/lib/kubelet/:/var/lib/kubelet:rw \
+            [[[kubeHyperkubeSpec]]] \
+              /hyperkube kubelet \
+                --containerized \
+                --api-servers="https://{{{masterFqdn}}}:6443" \
+                --kubeconfig=/var/lib/kubelet/kubeconfig \
+                --address=0.0.0.0 \
+                --allow-privileged=true \
+                --enable-server \
+                --config=/etc/kubernetes/manifests \
+                --cluster-dns=[[[kubeDnsServiceIp]]]\
+                --cluster-domain=cluster.local \
+                --register-node=false \
+                --v=2
         ExecStop=/usr/bin/docker stop -t 2 kubelet
-    - name: "ensure-secrets.service"
-      command: "start"
-      content: |
-        [Unit]
-        Description=Load kubeconfig files for the kube components
-        Before=kubelet.service
-        Requires=flanneld.service
-        Requires=docker.service
-        After=flanneld.service
-        After=docker.service
-
-        [Service]
-        Restart=on-failure
-        ExecStart=/usr/bin/docker run \
-          -v /etc/ssl:/etc/ssl \
-          -v /usr/share/ca-certificates:/usr/share/ca-certificates \
-          -v /etc/kubernetes:/etc/kubernetes \
-          -v /var/lib/waagent:/var/lib/waagent \
-          colemickens/azkube /azkube certinstall --machineType=master

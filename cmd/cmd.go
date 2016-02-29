@@ -61,11 +61,11 @@ func validateRootArgs() {
 		log.Fatal("--tenant-id must be specified")
 	}
 
-	if rootArgNames.AuthMethod == "client-secret" {
+	if rootArgNames.AuthMethod == "client_secret" {
 		if viper.GetString(rootArgNames.ClientID) == "" || viper.GetString(rootArgNames.ClientSecret) == "" {
 			log.Fatal("--client-id and --client-secret must be specified when --auth-method=\"client_secret\"")
 		}
-	} else if rootArgNames.AuthMethod == "client-certificate" {
+	} else if rootArgNames.AuthMethod == "client_certificate" {
 		if viper.GetString(rootArgNames.ClientID) == "" || viper.GetString(rootArgNames.CertificatePath) == "" || viper.GetString(rootArgNames.PrivateKeyPath) == "" {
 			log.Fatal("--client-id and --certificate-path, and --private-key-path must be specified when --auth-method=\"client_certificate\"")
 		}

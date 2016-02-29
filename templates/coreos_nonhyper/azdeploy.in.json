@@ -74,6 +74,7 @@
 
 		"kubernetesReleaseUrl": {
 			"type": "string",
+			"defaultValue": "http://downloadlink1.1.1",
 			"metadata": {
 				"description": "container spec for hyperkube"
 			}
@@ -137,9 +138,8 @@
 
 		"kubePodCidr": "10.2.0.0/16",
 		"kubeServiceCidr": "10.3.0.0/24",
-		"kubeApiServiceIp": "10.3.0.1",
-		"kubeDnsServiceIp": "10.3.0.10",
-		"kubeHyperkubeSpec": "google_containers/hyperkube:v1.1.8",
+		"apiServiceIp": "10.3.0.1",
+		"dnsServiceIp": "10.3.0.10",
 
 		"storageAccountName": "[replace(concat(resourceGroup().name, 'strg'),'-','')]",
 		"storageContainerName": "kube-vm-disks",

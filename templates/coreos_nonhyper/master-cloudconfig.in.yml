@@ -1,0 +1,121 @@
+#cloud-config
+
+[[[var]]]
+{{{param}}}
+
+write_files:
+- path: "/etc/kubernetes/azure.json"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {
+        "tenantId": "{{{tenantID}}}",
+        "subscriptionId": "[[[subscriptionId]]]",
+        "resourceGroup": "[[[resourceGroup]]]",
+        "servicePrincipalClientId": "{{{servicePrincipalClientId}}}",
+        "servicePrincipalClientSecret": "{{{servicePrincipalClientSecret}}}"
+    }
+
+- path: "/etc/kubernetes/ca.crt"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{caCertificate}}}
+
+- path: "/etc/kubernetes/apiserver.crt"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{apiserverCertificate}}}
+
+- path: "/etc/kubernetes/apiserver.key"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{apiserverPrivateKey}}}
+
+- path: "/etc/kubernetes/client.crt"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{clientCertificate}}}
+
+- path: "/etc/kubernetes/client.key"
+  permissions: "0644"
+  owner: "root"
+  content: |
+    {{{clientPrivateKey}}}
+
+coreos:
+  etcd2:
+    advertise-client-urls: "http://{{{masterFqdn}}:2379"
+    listen-client-urls: "http://0.0.0.0:2379,http://0.0.0.0:4001"
+  units:
+    - name: "etcd2.service"
+      command: "start"
+    - name: flanneld.service
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config "{ \"Network\": \"{{.PodCidr}}\" }"
+      command: "start"
+    - name: "docker.service"
+      command: "start"
+    - name: "kubelet.service"
+      command: "start"
+      content: |
+        [Unit]
+        Description=Kubelet
+        Requires=docker.service
+        Requires=flanneld.service
+        Requires=ensure-secrets.service
+        After=docker.service
+        After=flanneld.service
+        After=ensure-secrets.service
+
+        [Service]
+        Restart=always
+        ExecStart=/usr/bin/docker run \
+                    --net=host \
+                    --privileged \
+                    -v /sys:/sys:ro \
+                    -v /var/run:/var/run:rw \
+                    -v /:/rootfs:ro \
+                    -v /dev:/dev \
+                    -v /var/lib/docker/:/var/lib/docker:ro \
+                    -v /var/lib/kubelet/:/var/lib/kubelet:rw \
+                    -v /etc/kubernetes/:/etc/kubernetes/:rw \
+                    {{.HyperkubeContainerSpec}} \
+                      /hyperkube kubelet \
+                        --containerized \
+                        --api-servers=https://{{.MasterFQDN}}:6443 \
+                        --kubeconfig=/etc/kubernetes/master-kubelet-kubeconfig \
+                        --address=0.0.0.0 \
+                        --allow-privileged=true \
+                        --enable-server \
+                        --config=/etc/kubernetes/manifests \
+                        --cluster-dns={{.DnsServiceIp}}\
+                        --cluster-domain=cluster.local \
+                        --register-node=false \
+                        --v=2
+        ExecStop=/usr/bin/docker stop -t 2 kubelet
+    - name: "ensure-secrets.service"
+      command: "start"
+      content: |
+        [Unit]
+        Description=Load kubeconfig files for the kube components
+        Before=kubelet.service
+        Requires=flanneld.service
+        Requires=docker.service
+        After=flanneld.service
+        After=docker.service
+
+        [Service]
+        Restart=on-failure
+        ExecStart=/usr/bin/docker run \
+          -v /etc/ssl:/etc/ssl \
+          -v /usr/share/ca-certificates:/usr/share/ca-certificates \
+          -v /etc/kubernetes:/etc/kubernetes \
+          -v /var/lib/waagent:/var/lib/waagent \
+          colemickens/azkube /azkube certinstall --machineType=master
