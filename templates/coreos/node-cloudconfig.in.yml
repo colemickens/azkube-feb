@@ -145,6 +145,6 @@ coreos:
                 --config=/etc/kubernetes/manifests \
                 --cluster-dns=[[[kubeDnsServiceIP]]] \
                 --cluster-domain=cluster.local \
-                --register-node=false \
+                --register-node=true \
                 --v=2
         ExecStop=/usr/bin/docker stop -t 2 kubelet
