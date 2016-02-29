@@ -26,18 +26,16 @@ var (
 )
 
 func NewDeployCmd() *cobra.Command {
-	var deployArgs util.DeployArguments
-
 	var deployCmd = &cobra.Command{
 		Use:   "deploy",
 		Short: "creates a new kubernetes cluster in Azure",
 		Long:  deployLongDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := validateDeployArgs(&deployArgs)
+			err := validateDeployArgs()
 			if err != nil {
 				log.Fatalf("Failed to validate arguments for `deploy` command: %q", err)
 			}
-			err = deployRun(cmd, args, deployArgs)
+			err = deployRun(cmd, args)
 			if err != nil {
 				log.Fatalf("Error occurred during deployment: %q", err)
 			}
@@ -75,7 +73,7 @@ func NewDeployCmd() *cobra.Command {
 	return deployCmd
 }
 
-func validateDeployArgs(deployArgs *util.DeployArguments) error {
+func validateDeployArgs() error {
 	validateRootArgs()
 
 	// TODO: validate location + vmsizes, esp since used for masterfqdn
@@ -113,7 +111,7 @@ func validateDeployArgs(deployArgs *util.DeployArguments) error {
 	return nil
 }
 
-func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArguments) error {
+func deployRun(cmd *cobra.Command, args []string) error {
 	d, err := util.NewDeployer()
 	if err != nil {
 		return err
@@ -128,15 +126,15 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 		ca, apiserver, client *util.PkiKeyCertPair
 	)
 
-	pkiLock := stepPki(d, deployArgs, &ca, &apiserver, &client)
-	sshLock := stepSsh(d, deployArgs, &sshPrivateKey, &sshPublicKeyString)
+	pkiLock := stepPki(d, &ca, &apiserver, &client)
+	sshLock := stepSsh(d, &sshPrivateKey, &sshPublicKeyString)
 
-	rgLock := stepRg(d, deployArgs)
+	rgLock := stepRg(d)
 	if err = <-rgLock; err != nil {
 		return err
 	}
 
-	adLock := stepAd(d, deployArgs, &applicationID, &servicePrincipalObjectID, &servicePrincipalClientSecret)
+	adLock := stepAd(d, &applicationID, &servicePrincipalObjectID, &servicePrincipalClientSecret)
 	if err = <-adLock; err != nil {
 		return err
 	}
@@ -149,12 +147,17 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 
 	_, _ = appName, appURL
 
-	deployLock := stepDeploy(d, deployArgs,
+	deployLock := stepDeploy(d,
 		applicationID, servicePrincipalObjectID, servicePrincipalClientSecret,
 		sshPrivateKey, sshPublicKeyString,
 		ca, apiserver, client)
 
 	if err = <-deployLock; err != nil {
+		return err
+	}
+
+	validateLock := stepValidate(d)
+	if err = <-validateLock; err != nil {
 		return err
 	}
 
@@ -165,7 +168,25 @@ func deployRun(cmd *cobra.Command, args []string, deployArgs util.DeployArgument
 	return nil
 }
 
-func stepRg(d *util.Deployer, deployArgs util.DeployArguments) chan error {
+func stepValidate(d *util.Deployer) chan error {
+	var c chan error = make(chan error)
+
+	go func() {
+		var err error
+		defer func() {
+			c <- err
+		}()
+
+		// output kubeconfig file for a client to use
+		// validate the deployment with some clietn
+
+		util.ValidateDeployment()
+	}()
+
+	return c
+}
+
+func stepRg(d *util.Deployer) chan error {
 	var c chan error = make(chan error)
 
 	go func() {
@@ -186,7 +207,7 @@ func stepRg(d *util.Deployer, deployArgs util.DeployArguments) chan error {
 	return c
 }
 
-func stepAd(d *util.Deployer, deployArgs util.DeployArguments,
+func stepAd(d *util.Deployer,
 	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret *string) chan error {
 	var c chan error = make(chan error)
 
@@ -213,7 +234,7 @@ func stepAd(d *util.Deployer, deployArgs util.DeployArguments,
 	return c
 }
 
-func stepSsh(d *util.Deployer, deployArgs util.DeployArguments,
+func stepSsh(d *util.Deployer,
 	sshPrivateKey **rsa.PrivateKey, sshPublicKeyString *string) chan error {
 	var c chan error = make(chan error)
 
@@ -237,7 +258,7 @@ func stepSsh(d *util.Deployer, deployArgs util.DeployArguments,
 	return c
 }
 
-func stepPki(d *util.Deployer, deployArgs util.DeployArguments,
+func stepPki(d *util.Deployer,
 	ca, apiserver, client **util.PkiKeyCertPair) chan error {
 	var c chan error = make(chan error)
 
@@ -281,7 +302,7 @@ func stepPki(d *util.Deployer, deployArgs util.DeployArguments,
 	return c
 }
 
-func stepDeploy(d *util.Deployer, deployArgs util.DeployArguments,
+func stepDeploy(d *util.Deployer,
 	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret string,
 	sshPrivateKey *rsa.PrivateKey, sshPublicKeyString string,
 	ca, apiserver, client *util.PkiKeyCertPair) chan error {
