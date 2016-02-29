@@ -52,7 +52,6 @@ func NewRootCmd() *cobra.Command {
 }
 
 func validateRootArgs() {
-	log.Warnf(viper.GetString("subscription-id"))
 	if viper.GetString(util.RootArgNames.SubscriptionID) == "" {
 		log.Fatal("--subscription-id must be specified")
 	}

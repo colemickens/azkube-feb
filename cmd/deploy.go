@@ -147,28 +147,29 @@ func deployRun(cmd *cobra.Command, args []string) error {
 
 	_, _ = appName, appURL
 
-	deployLock := stepDeploy(d,
+	flavorArgs := deployToFlavorArgs(
 		applicationID, servicePrincipalObjectID, servicePrincipalClientSecret,
 		sshPrivateKey, sshPublicKeyString,
 		ca, apiserver, client)
 
+	deployLock := stepDeploy(d, flavorArgs)
 	if err = <-deployLock; err != nil {
 		return err
 	}
 
-	validateLock := stepValidate(d)
+	validateLock := stepValidate(flavorArgs)
 	if err = <-validateLock; err != nil {
 		return err
 	}
 
 	log.Infof("Deployment Complete!")
-	log.Infof("Master is at: %q", viper.GetString(deployArgNames.MasterFQDN))
-	log.Infof("ssh -i %s/%s_rsa %s@%s", viper.GetString(deployArgNames.OutputDirectory), viper.GetString(deployArgNames.Username), viper.GetString(deployArgNames.Username), viper.GetString(deployArgNames.MasterFQDN))
+	log.Infof("master: %q", "https://"+viper.GetString(deployArgNames.MasterFQDN)+":6443")
+	log.Infof("scripts: %q", viper.GetString(deployArgNames.OutputDirectory))
 
 	return nil
 }
 
-func stepValidate(d *util.Deployer) chan error {
+func stepValidate(flavorArgs util.FlavorArguments) chan error {
 	var c chan error = make(chan error)
 
 	go func() {
@@ -177,10 +178,7 @@ func stepValidate(d *util.Deployer) chan error {
 			c <- err
 		}()
 
-		// output kubeconfig file for a client to use
-		// validate the deployment with some clietn
-
-		util.ValidateDeployment()
+		util.ValidateDeployment(flavorArgs)
 	}()
 
 	return c
@@ -302,10 +300,37 @@ func stepPki(d *util.Deployer,
 	return c
 }
 
-func stepDeploy(d *util.Deployer,
+func deployToFlavorArgs(
 	applicationID, servicePrincipalObjectID, servicePrincipalClientSecret string,
 	sshPrivateKey *rsa.PrivateKey, sshPublicKeyString string,
-	ca, apiserver, client *util.PkiKeyCertPair) chan error {
+	ca, apiserver, client *util.PkiKeyCertPair) util.FlavorArguments {
+	flavorArgs := util.FlavorArguments{
+		DeploymentName: viper.GetString(deployArgNames.DeploymentName),
+
+		TenantID: viper.GetString(rootArgNames.TenantID),
+
+		MasterSize:       viper.GetString(deployArgNames.MasterSize),
+		NodeSize:         viper.GetString(deployArgNames.NodeSize),
+		NodeCount:        viper.GetInt(deployArgNames.NodeCount),
+		Username:         viper.GetString(deployArgNames.Username),
+		SshPublicKeyData: sshPublicKeyString,
+
+		KubernetesReleaseURL:    viper.GetString(deployArgNames.KubernetesReleaseURL),
+		KubernetesHyperkubeSpec: viper.GetString(deployArgNames.KubernetesHyperkubeSpec),
+
+		ServicePrincipalClientID:     applicationID,
+		ServicePrincipalClientSecret: servicePrincipalClientSecret,
+
+		MasterFQDN: viper.GetString(deployArgNames.MasterFQDN),
+
+		CAKeyPair:        ca,
+		ApiserverKeyPair: apiserver,
+		ClientKeyPair:    client,
+	}
+	return flavorArgs
+}
+
+func stepDeploy(d *util.Deployer, flavorArgs util.FlavorArguments) chan error {
 	var c chan error = make(chan error)
 
 	go func() {
@@ -313,31 +338,6 @@ func stepDeploy(d *util.Deployer,
 		defer func() {
 			c <- err
 		}()
-
-		// TODO(colemick, consider): make a reserved ip for the kbue master TODO(colemick): for dns stability
-		flavorArgs := util.FlavorArguments{
-			DeploymentName: viper.GetString(deployArgNames.DeploymentName),
-
-			TenantID: viper.GetString(rootArgNames.TenantID),
-
-			MasterSize:       viper.GetString(deployArgNames.MasterSize),
-			NodeSize:         viper.GetString(deployArgNames.NodeSize),
-			NodeCount:        viper.GetInt(deployArgNames.NodeCount),
-			Username:         viper.GetString(deployArgNames.Username),
-			SshPublicKeyData: sshPublicKeyString,
-
-			KubernetesReleaseURL:    viper.GetString(deployArgNames.KubernetesReleaseURL),
-			KubernetesHyperkubeSpec: viper.GetString(deployArgNames.KubernetesHyperkubeSpec),
-
-			ServicePrincipalClientID:     applicationID,
-			ServicePrincipalClientSecret: servicePrincipalClientSecret,
-
-			MasterFQDN: viper.GetString(deployArgNames.MasterFQDN),
-
-			CAKeyPair:        ca,
-			ApiserverKeyPair: apiserver,
-			ClientKeyPair:    client,
-		}
 
 		template, parameters, err := util.ProduceTemplateAndParameters(flavorArgs)
 		if err != nil {
@@ -353,6 +353,15 @@ func stepDeploy(d *util.Deployer,
 			return
 		}
 
+		utilScript, err := util.ProduceUtilScript(flavorArgs)
+		if err != nil {
+			return
+		}
+		err = util.SaveDeploymentFile("util.sh", utilScript, 0700)
+		if err != nil {
+			return
+		}
+
 		_, err = d.DoDeployment(
 			viper.GetString(deployArgNames.ResourceGroup),
 			"myriad",
@@ -363,7 +372,6 @@ func stepDeploy(d *util.Deployer,
 			return
 		}
 
-		_ = sshPrivateKey
 		return
 	}()
 	return c

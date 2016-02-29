@@ -38,7 +38,7 @@ func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resour
 	var err error
 	var response resources.DeploymentExtended
 	var infoUpdateCount int = 0
-	log.Infof("deployment: waiting for deployment to complete. deployment=%q", deploymentName)
+	log.Infof("deployment: waiting for completion. deployment=%q", deploymentName)
 	for {
 		time.Sleep(5 * time.Second)
 
@@ -53,18 +53,18 @@ func (d *Deployer) WaitDeployment(resourceGroup, deploymentName string) (*resour
 			infoUpdateCount++
 			if infoUpdateCount >= 6 {
 				infoUpdateCount = 0
-				log.Infof("deployment: deployment in progress. deployment=%q state=%q", deploymentName, *state)
+				log.Infof("deployment: in progress. deployment=%q state=%q", deploymentName, *state)
 			}
 			continue
 		}
 
 		if *state == "Succeeded" {
-			log.Infof("deployment: %q deployment succeeded!", deploymentName)
+			log.Infof("deployment: finished. deployment=%q", deploymentName)
 			return &response, nil
 		} else if *state == "Failed" {
-			return &response, fmt.Errorf("deployment: deployment failed! deployment=%q", deploymentName)
+			return &response, fmt.Errorf("deployment: failed! deployment=%q", deploymentName)
 		} else {
-			return &response, fmt.Errorf("deployment: deployment  in an unknown state. deployment=%s", deploymentName, *state)
+			return &response, fmt.Errorf("deployment: {unknown state}. deployment=%s", deploymentName, *state)
 		}
 	}
 

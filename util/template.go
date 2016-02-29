@@ -16,6 +16,7 @@ import (
 var (
 	myriadTemplate           *template.Template
 	myriadParametersTemplate *template.Template
+	utilTemplate             *template.Template
 	masterScript             string
 	nodeScript               string
 
@@ -56,6 +57,24 @@ func init() {
 		panic(err)
 	}
 
+	utilTemplate, err =
+		template.New("util").
+			Parse(mustRead("templates/coreos/util.in.sh"))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ProduceUtilScript(flavorArgs FlavorArguments) (utilScript string, err error) {
+	log.Info("template: populating util template")
+	buf := bytes.Buffer{}
+
+	err = utilTemplate.Execute(&buf, flavorArgs)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func ProduceTemplateAndParameters(flavorArgs FlavorArguments) (template, parameters map[string]interface{}, err error) {

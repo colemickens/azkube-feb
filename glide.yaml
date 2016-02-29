@@ -16,3 +16,7 @@ import:
 - package: github.com/Sirupsen/logrus
   vcs: git
   repo: https://github.com/Sirupsen/logrus
+- package: k8s.io/kubernetes
+  version: v1.1.8
+  subpackages:
+  - pkg
